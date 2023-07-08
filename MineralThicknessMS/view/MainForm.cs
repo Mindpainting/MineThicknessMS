@@ -7,6 +7,9 @@ using GMap.NET.WindowsForms.Markers;
 using OxyPlot.Series;
 using OxyPlot;
 using OxyPlot.Axes;
+using System.Data;
+using System.Windows.Forms;
+using MineralThicknessMS.view;
 
 namespace MineralThicknessMS
 {
@@ -20,7 +23,6 @@ namespace MineralThicknessMS
         private GMarkerGoogle scjMarker;//水采机标记
         private GMarkerGoogle csyMarker1;//第一个测深仪标记
         private GMarkerGoogle csyMarker2;//第二个测深仪标记
-
         //private Thread mapThread1;//生成网格
         //private Thread mapThread2;//实时网格填色，标记水采机，测深仪
 
@@ -40,7 +42,7 @@ namespace MineralThicknessMS
 
             timer2.Interval = 3000;
             timer2.Start();
-            timer2.Tick += new System.EventHandler(time2_Tick);
+            //timer2.Tick += new System.EventHandler(time2_Tick);
 
             gridInMapInit();
 
@@ -56,80 +58,123 @@ namespace MineralThicknessMS
         {
             // 调接口获取延迟边界数据，绘制边界线
 
-            // 边界点
-            List<PointLatLng> boundaryPoints = new()
+            // 边界点y45
+/*            List<PointLatLng> boundaryPoints = new()
             {
                 new PointLatLng(40.2810614738, 90.4917205106),
                 new PointLatLng(40.2745895561, 90.4850289188),
                 new PointLatLng(40.2647281553, 90.5022922085),
                 new PointLatLng(40.2712197832, 90.5048896228),
+            };*/
+
+
+            //y31
+            List<PointLatLng> boundaryPoints = new()
+            {
+                new PointLatLng(40.2531571096, 90.4901935097),
+                new PointLatLng(40.2507185251, 90.4834874450),
+                new PointLatLng(40.2425903988, 90.4939599525),
+                new PointLatLng(40.2450507356, 90.5006782956)
             };
             BoundaryPoints.setBoundaryPoints(boundaryPoints);
-            
-            /*            List<PointLatLng> boundaryPoints = new()
-                        {
-                            new PointLatLng(40.2531571096, 90.4901935097),
-                            new PointLatLng(40.2507185251, 90.4834874450),
-                            new PointLatLng(40.2425903988, 90.4939599525),
-                            new PointLatLng(40.2450507356, 90.5006782956)
-                        };*/
-
-            /*            correctedPoints.ForEach(point =>
-                        {
-                            //AMapMarker自定义地图标记点
-                            overlay.Markers.Add(new AMapMarker(point, 8));
-
-                        });*/
-
             List<List<Grid>> gridList = GridView.gridBuild(boundaryPoints);
             Status.grids = gridList;
 
+/*            BoundaryPoints.getCorrectedPoints().ForEach(point =>
+            {
+                //AMapMarker自定义地图标记点
+                overlay.Markers.Add(new AMapMarker(point, 8));
+
+            });*/
+
             //遍历每一个格子，在地图上绘制
-            gridList.ForEach(aChannelGrid => {
-                aChannelGrid.ForEach(aGrid => {
+            gridList.ForEach(aChannelGrid =>
+            {
+                aChannelGrid.ForEach(aGrid =>
+                {
                     overlay.Polygons.Add(new(aGrid.PointLatLngs, "gridPolygon")
-                    {   
+                    {
                         Stroke = new Pen(Color.Yellow, 2)
                     });
                 });
             });
+            /*            gridList.ForEach(aChannelGrid =>
+                        {
+                            aChannelGrid.ForEach(aGrid =>
+                            {
+                                overlay.Polygons.Add(new(aGrid.PointLatLngs, "gridPolygon")
+                                {
+                                    Stroke = new Pen(Color.Yellow, 2)
+                                });
+                                GMapPolygon gridPolygon = new(aGrid.PointLatLngs, "gridPolygon")
+                                {
+                                    Stroke = new Pen(Color.Yellow, 2),
+                                };
+                                Random random = new Random();
+                                int randomNumber = random.Next(2, 10);
+                                if (randomNumber >= 2 && randomNumber <= 4)
+                                {
+                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.YellowGreen));
+                                }
+                                else if (randomNumber > 4 && randomNumber <= 6)
+                                {
+                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.SkyBlue));
+                                }
+                                else if (randomNumber > 6 && randomNumber <= 8)
+                                {
+                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.Orange));
+                                }
+                                else
+                                {
+                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.MediumPurple));
+                                }
+                                overlay.Polygons.Add(gridPolygon);
+                            });
+                        });*/
 
             // 创建多边形
-            GMapPolygon polygon = new(BoundaryPoints.boundaryPointsList(), "polygon")
+/*            GMapPolygon polygon = new(BoundaryPoints.getCorrectedPoints(), "polygon")
             {
                 // 设置多边形填充颜色
                 Fill = new SolidBrush(Color.FromArgb(50, Color.ForestGreen)),
                 // 设置多边形边界颜色和宽度
                 Stroke = new Pen(Color.Yellow, 3)
             };
-            overlay.Polygons.Add(polygon);
+            overlay.Polygons.Add(polygon);*/
 
             gMapControl.Overlays.Add(overlay);
         }
 
-        /*        public void RenderMap2()
-                {
-                    while (true)
-                    {
-
-                        Thread.Sleep(3000);
-                    }
-                }*/
-
         private void time2_Tick(object sender, EventArgs e)
         {
-            //DataAnalysis.updateMineAvg();
-            //DataAnalysis.updateDayDataAnalysis();
-            //DataAnalysis.updateMonthDataAnalysis();
+            Task.Run(() =>
+            {
+                DataAnalysis.updateMineAvg();
+            });
+            System.Data.DataTable ds = DataAnalysis.mineTable();
+            double sum = 0;
+            foreach (DataRow row in ds.Rows)
+            {
+                double x = MsgDecode.StrConvertToDou(row[1]);
+                sum += x;
+            }
 
-            //addLineChart();
-            //addLineChart1();
+            labelTotalData.Text = "当前本盐池采矿总量为:" + (Math.Round(sum, 2)).ToString() + "m³";
+            dataGridView1.DataSource = ds;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
             GMapInit();//地图初始化
-            dataGridView1.DataSource = DataAnalysis.mineTable();
+            Task.Run(() =>
+            {
+                System.Data.DataTable result = DataAnalysis.mineTable();
+
+                dataGridView1.Invoke(new Action(() =>
+                {
+                    dataGridView1.DataSource = result;
+                }));
+            });
         }
         // GMap基础信息初始化
         public void GMapInit()
@@ -212,7 +257,6 @@ namespace MineralThicknessMS
             List<List<DataMsg>> res2 = new();
             //存放每个格子内分出的两组数据的平均矿厚
             double[] avgMT = new double[2];
-
             try
             {
                 if (Status.waterwayId[0] != 0 && Status.rectangleId[0] != 0)
@@ -306,7 +350,8 @@ namespace MineralThicknessMS
             {
                 Status.grids.ForEach(aChannelGrids =>
                 {
-                    aChannelGrids.ForEach(grid => {
+                    aChannelGrids.ForEach(grid =>
+                    {
                         if (grid.Column == Status.waterwayId[i] && grid.Row == Status.rectangleId[i])
                         {
                             GMapPolygon targetGridPolygon = new(grid.PointLatLngs, "targetGridPolygon");
@@ -333,7 +378,7 @@ namespace MineralThicknessMS
                             targetGridPolygon.Stroke = new Pen(Color.Yellow, 2);
                             overlay.Polygons.Add(targetGridPolygon);
                         }
-                    });                   
+                    });
                 });
             }
         }
@@ -444,7 +489,9 @@ namespace MineralThicknessMS
         //开启服务按钮
         private void btnStartService_Click(object sender, EventArgs e)
         {
-            if (Status.height1 == 0 || Status.height2 == 0)
+            if (MsgDecode.StrConvertToDou(txtHeight1.Text) <= 0 || MsgDecode.StrConvertToDou(txtHeight2.Text) <= 0
+                || txtHeight1.Enabled == true || txtHeight2.Enabled == true
+                )
             {
                 MessageBox.Show("请先提交下方的支架高度和盐池底板高度！", "服务开启失败");
             }
@@ -559,14 +606,14 @@ namespace MineralThicknessMS
 
         private void btnDataSub_Click(object sender, EventArgs e)
         {
-            if (txtHeight1.Text == "" || txtHeight2.Text == "" || txtHeight1.Text == null || txtHeight2 == null)
+            if (MsgDecode.StrConvertToDou(txtHeight1.Text) <= 0 || MsgDecode.StrConvertToDou(txtHeight2.Text) <= 0)
             {
                 MessageBox.Show("请先输入支架高度和盐池底板高度！");
             }
             else
             {
-                Status.height1 = msgDecode.StrConvertToDou(txtHeight1.Text);
-                Status.height2 = msgDecode.StrConvertToDou(txtHeight2.Text);
+                Status.height1 = MsgDecode.StrConvertToDou(txtHeight1.Text);
+                Status.height2 = MsgDecode.StrConvertToDou(txtHeight2.Text);
                 txtHeight1.Enabled = false;
                 txtHeight2.Enabled = false;
             }
@@ -577,9 +624,34 @@ namespace MineralThicknessMS
             DataAnalysis.ExportToExcel(DataAnalysis.mineTable());
         }
 
+        //导入浅滩数据按钮
         private void btnInputData_Click(object sender, EventArgs e)
         {
+            RadarDataInputForm form = new RadarDataInputForm();
+            form.ShowDialog();
 
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            // 设置对话框的标题和过滤器
+            openFileDialog.Title = "选择ASC文件";
+            openFileDialog.Filter = "ASC文件|*asc";
+            // 显示对话框并检查用户是否点击了“确定”按钮
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string filePath = openFileDialog.FileName;
+
+                // 调用处理文件的方法，传入选定的文件路径
+                //读出原始数据
+                List<LaterPoint> points = DataAnalysis.ReadRadarAsciiFile(filePath);
+
+                List<Produce> radarProduce = new List<Produce>();
+                radarProduce = DataAnalysis.produceList(points);
+
+                radarProduce = DataAnalysis.SubtractX(radarProduce, Status.height2);
+                DataAnalysis.radarDataInsert(radarProduce);
+
+                //求出所有格子的矿厚
+                MessageBox.Show("雷达数据读取完成");
+            }
         }
 
         //矿量日报表折线图

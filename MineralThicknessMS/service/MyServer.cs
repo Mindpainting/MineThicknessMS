@@ -63,7 +63,10 @@ namespace MineralThicknessMS.service
             String str = e.Data.EncodeToString();
             DataMsg dataMsg = new DataMsg();
             dataMsg = msgDecode.msgSplit(str);
-            if(dataMsg.getMsgBegin() == "$GPGGA" && dataMsg.getMsgEnd() == "*5F")
+            if(dataMsg.getMsgBegin() == "$GPGGA" && dataMsg.getMsgEnd() == "*5F"
+                && dataMsg.getWaterwayId() != 0 && dataMsg.getRectangleId() !=0
+                && dataMsg.getMineHigh() >= 0
+                )
             {
                 dataMapper.addData(dataMsg);
                 status.setStatus(dataMsg);

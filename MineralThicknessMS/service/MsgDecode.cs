@@ -68,7 +68,7 @@ namespace MineralThicknessMS.service
         }
 
         //string转double
-        public double StrConvertToDou(Object o)
+        public static double StrConvertToDou(Object o)
         {
             double result = 0;
             if (o != null)

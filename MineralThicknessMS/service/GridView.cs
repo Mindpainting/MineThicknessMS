@@ -113,11 +113,10 @@ namespace MineralThicknessMS.service
             return result;
         }
 
-        //给一个盐池四个角点(dms)，按航道分组的格子，一个dms经纬度点，返回该点所在格子，id不为零在格子内，否则不在
-        public static Grid selectGrid(List<PointLatLng> boundaryPoints, List<List<Grid>> gridsGroupByChannel, PointLatLng dmsPoint)
+        //给一个盐池四个角点(deg)，按航道分组的格子，一个dms经纬度点，返回该点所在格子，id不为零在格子内，否则不在
+        public static Grid selectGrid(List<PointLatLng> correctedPoints, List<List<Grid>> gridsGroupByChannel, PointLatLng dmsPoint)
         {
-            PointLatLng degPoint = new(dmsTodeg(dmsPoint.Lat), dmsTodeg(dmsPoint.Lng));
-            List<PointLatLng> correctedPoints = BoundaryPoints.getCorrectedPoints();
+            PointLatLng degPoint = new(dmsTodeg(dmsPoint.Lat), dmsTodeg(dmsPoint.Lng));          
             return pointInGrid(correctedPoints, gridsGroupByChannel, degPoint);
         }
 

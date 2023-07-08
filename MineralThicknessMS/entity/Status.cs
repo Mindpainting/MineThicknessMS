@@ -42,6 +42,9 @@ namespace MineralThicknessMS.entity
         //每一个小网格集合，按航道分组
         public static List<List<Grid>> grids = new();
 
+        //网格底面积
+        public static double s = 81;
+
         public void setStatus(DataMsg dataMsg)
         {
             try

@@ -4,12 +4,9 @@ using MineralThicknessMS.entity;
 using MineralThicknessMS.service;
 using GMap.NET.MapProviders;
 using GMap.NET.WindowsForms.Markers;
-using OxyPlot.Series;
-using OxyPlot;
-using OxyPlot.Axes;
 using System.Data;
-using System.Windows.Forms;
 using MineralThicknessMS.view;
+
 
 namespace MineralThicknessMS
 {
@@ -42,7 +39,7 @@ namespace MineralThicknessMS
 
             timer2.Interval = 3000;
             timer2.Start();
-            //timer2.Tick += new System.EventHandler(time2_Tick);
+            timer2.Tick += new System.EventHandler(time2_Tick);
 
             gridInMapInit();
 
@@ -59,33 +56,33 @@ namespace MineralThicknessMS
             // 调接口获取延迟边界数据，绘制边界线
 
             // 边界点y45
-/*            List<PointLatLng> boundaryPoints = new()
-            {
-                new PointLatLng(40.2810614738, 90.4917205106),
-                new PointLatLng(40.2745895561, 90.4850289188),
-                new PointLatLng(40.2647281553, 90.5022922085),
-                new PointLatLng(40.2712197832, 90.5048896228),
-            };*/
+            /*            List<PointLatLng> boundaryPoints = new()
+                        {
+                            new PointLatLng(40.2810614738, 90.4917205106),
+                            new PointLatLng(40.2745895561, 90.4850289188),
+                            new PointLatLng(40.2647281553, 90.5022922085),
+                            new PointLatLng(40.2712197832, 90.5048896228),
+                        };*/
 
 
             //y31
             List<PointLatLng> boundaryPoints = new()
-            {
-                new PointLatLng(40.2531571096, 90.4901935097),
-                new PointLatLng(40.2507185251, 90.4834874450),
-                new PointLatLng(40.2425903988, 90.4939599525),
-                new PointLatLng(40.2450507356, 90.5006782956)
-            };
+                        {
+                            new PointLatLng(40.2531571096, 90.4901935097),
+                            new PointLatLng(40.2507185251, 90.4834874450),
+                            new PointLatLng(40.2425903988, 90.4939599525),
+                            new PointLatLng(40.2450507356, 90.5006782956)
+                        };
+
+            /*            correctedPoints.ForEach(point =>
+                        {
+                            //AMapMarker自定义地图标记点
+                            overlay.Markers.Add(new AMapMarker(point, 8));
+
+                        });*/
             BoundaryPoints.setBoundaryPoints(boundaryPoints);
             List<List<Grid>> gridList = GridView.gridBuild(boundaryPoints);
             Status.grids = gridList;
-
-/*            BoundaryPoints.getCorrectedPoints().ForEach(point =>
-            {
-                //AMapMarker自定义地图标记点
-                overlay.Markers.Add(new AMapMarker(point, 8));
-
-            });*/
 
             //遍历每一个格子，在地图上绘制
             gridList.ForEach(aChannelGrid =>
@@ -98,49 +95,16 @@ namespace MineralThicknessMS
                     });
                 });
             });
-            /*            gridList.ForEach(aChannelGrid =>
-                        {
-                            aChannelGrid.ForEach(aGrid =>
-                            {
-                                overlay.Polygons.Add(new(aGrid.PointLatLngs, "gridPolygon")
-                                {
-                                    Stroke = new Pen(Color.Yellow, 2)
-                                });
-                                GMapPolygon gridPolygon = new(aGrid.PointLatLngs, "gridPolygon")
-                                {
-                                    Stroke = new Pen(Color.Yellow, 2),
-                                };
-                                Random random = new Random();
-                                int randomNumber = random.Next(2, 10);
-                                if (randomNumber >= 2 && randomNumber <= 4)
-                                {
-                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.YellowGreen));
-                                }
-                                else if (randomNumber > 4 && randomNumber <= 6)
-                                {
-                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.SkyBlue));
-                                }
-                                else if (randomNumber > 6 && randomNumber <= 8)
-                                {
-                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.Orange));
-                                }
-                                else
-                                {
-                                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(225, Color.MediumPurple));
-                                }
-                                overlay.Polygons.Add(gridPolygon);
-                            });
-                        });*/
 
             // 创建多边形
-/*            GMapPolygon polygon = new(BoundaryPoints.getCorrectedPoints(), "polygon")
+            GMapPolygon polygon = new(BoundaryPoints.getCorrectedPoints(), "polygon")
             {
                 // 设置多边形填充颜色
                 Fill = new SolidBrush(Color.FromArgb(50, Color.ForestGreen)),
                 // 设置多边形边界颜色和宽度
                 Stroke = new Pen(Color.Yellow, 3)
             };
-            overlay.Polygons.Add(polygon);*/
+            overlay.Polygons.Add(polygon);
 
             gMapControl.Overlays.Add(overlay);
         }
@@ -151,30 +115,24 @@ namespace MineralThicknessMS
             {
                 DataAnalysis.updateMineAvg();
             });
-            System.Data.DataTable ds = DataAnalysis.mineTable();
+        }
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            System.Data.DataTable ds = DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
             double sum = 0;
             foreach (DataRow row in ds.Rows)
             {
                 double x = MsgDecode.StrConvertToDou(row[1]);
                 sum += x;
             }
-
-            labelTotalData.Text = "当前本盐池采矿总量为:" + (Math.Round(sum, 2)).ToString() + "m³";
+            labelTotalData.Text = "时间段内本盐池采矿总量为:" + (Math.Round(sum, 2)).ToString() + "m³";
             dataGridView1.DataSource = ds;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
             GMapInit();//地图初始化
-            Task.Run(() =>
-            {
-                System.Data.DataTable result = DataAnalysis.mineTable();
-
-                dataGridView1.Invoke(new Action(() =>
-                {
-                    dataGridView1.DataSource = result;
-                }));
-            });
         }
         // GMap基础信息初始化
         public void GMapInit()
@@ -621,7 +579,7 @@ namespace MineralThicknessMS
 
         private void btn_Excel_Click(object sender, EventArgs e)
         {
-            DataAnalysis.ExportToExcel(DataAnalysis.mineTable());
+            DataAnalysis.ExportToExcel(DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value), dateTimePickerBegin.Value, dateTimePickerEnd.Value);
         }
 
         //导入浅滩数据按钮
@@ -654,129 +612,11 @@ namespace MineralThicknessMS
             }
         }
 
-        //矿量日报表折线图
-        //private void addLineChart()
-        //{
-        //    plotView.Controller = new PlotController();
-        //    //禁用鼠标滚轮放大缩小折线图
-        //    plotView.Controller.UnbindMouseWheel();
-
-        //    //创建图标模型
-        //    var plotModel = new PlotModel()
-        //    {
-        //        Title = "矿量日趋势",
-        //        TitleFontSize = 16,
-        //        TitleFontWeight = FontWeights.Bold,
-        //        TitleColor = OxyColors.Black,
-        //    };
-
-        //    //x轴
-        //    var xAxis = new DateTimeAxis()
-        //    {
-        //        Position = AxisPosition.Bottom,
-        //        StringFormat = "MM/dd",
-        //        Minimum = DateTimeAxis.ToDouble(new DateTime(2023, 6, 22)),
-        //        Maximum = DateTimeAxis.ToDouble(new DateTime(2023, 6, 28)),
-        //        //按天间隔
-        //        IntervalType = DateTimeIntervalType.Days,
-        //        //刻度间隔，默认60
-        //        IntervalLength = 30,
-        //        //label旋转一定角度
-        //        Angle = -45,
-        //        //Unit = "2023"
-        //    };
-
-        //    //y轴
-        //    var yAxis = new LinearAxis()
-        //    {
-        //        Position = AxisPosition.Left,
-        //        AxislineColor = OxyColors.Black,
-        //        AxislineThickness = 2,
-        //        Minimum = 0,
-        //        Maximum = 1000,
-        //        MajorStep = 100,
-        //        MinorStep = 100,
-        //        Unit = "立方米",
-        //    };
-        //    plotModel.Axes.Add(xAxis);
-        //    plotModel.Axes.Add(yAxis);
-
-        //    //创建数据列
-        //    var dataSeries = new LineSeries()
-        //    {
-        //        Title = "Series",
-        //        Color = OxyColors.YellowGreen,
-        //        Points = {
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 22)), DataAnalysis.dayTotalMine[6])},
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 23)), DataAnalysis.dayTotalMine[5])},
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 24)), DataAnalysis.dayTotalMine[4])},
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 25)), DataAnalysis.dayTotalMine[3])},
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 26)), DataAnalysis.dayTotalMine[2])},
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 27)), DataAnalysis.dayTotalMine[1])},
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 28)), DataAnalysis.dayTotalMine[0])},
-        //        }
-        //    };
-        //    plotModel.Series.Add(dataSeries);
-
-        //    plotView.Model = plotModel;
-        //}
-
-        ////矿量月报表折线图
-        //private void addLineChart1()
-        //{
-        //    plotView1.Controller = new PlotController();
-        //    plotView1.Controller.UnbindMouseWheel();
-
-        //    var plotModel = new PlotModel()
-        //    {
-        //        Title = "矿量月趋势",
-        //        TitleFontSize = 16,
-        //        TitleFontWeight = FontWeights.Bold,
-        //        TitleColor = OxyColors.Black,
-        //    };
-
-        //    var xAxis = new DateTimeAxis()
-        //    {
-        //        Position = AxisPosition.Bottom,
-        //        StringFormat = "yyyy/MM",
-        //        Minimum = DateTimeAxis.ToDouble(new DateTime(2023, 4, 1)),
-        //        Maximum = DateTimeAxis.ToDouble(new DateTime(2023, 6, 1)),
-        //        //按月间隔
-        //        IntervalType = DateTimeIntervalType.Months,
-        //        IntervalLength = 30,
-        //        Angle = 0,
-        //    };
-
-        //    var yAxis = new LinearAxis()
-        //    {
-        //        Position = AxisPosition.Left,
-        //        AxislineColor = OxyColors.Black,
-        //        //AxislineThickness = 2,
-        //        Minimum = 0,
-        //        Maximum = 5000,
-        //        MajorStep = 1000,
-        //        MinorStep = 1000,
-        //        //y轴单位
-        //        Unit = "立方米"
-        //        //ExtraGridlineStyle = LineStyle.None,
-        //    };
-        //    plotModel.Axes.Add(xAxis);
-        //    plotModel.Axes.Add(yAxis);
-
-        //    //创建数据列
-        //    var dataSeries = new LineSeries()
-        //    {
-        //        Title = "Series",
-        //        Color = OxyColors.Orange,
-        //        Points = {
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 4, 1)), DataAnalysis.monthTotalMine[2]) },
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 5, 1)), DataAnalysis.monthTotalMine[1]) },
-        //            { new DataPoint(DateTimeAxis.ToDouble(new DateTime(2023, 6, 1)), DataAnalysis.monthTotalMine[0]) },
-        //        }
-        //    };
-        //    plotModel.Series.Add(dataSeries);
-
-        //    plotView1.Model = plotModel;
-        //}
+        //查看报表图
+        private void btnChart_Click(object sender, EventArgs e)
+        {
+            ChartForm chartForm = new(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
+            chartForm.ShowDialog();
+        }
     }
 }

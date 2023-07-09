@@ -180,6 +180,12 @@
             label3 = new Label();
             label4 = new Label();
             tabPage6 = new TabPage();
+            btnChart = new Button();
+            btnSearch = new Button();
+            label2 = new Label();
+            label1 = new Label();
+            dateTimePickerEnd = new DateTimePicker();
+            dateTimePickerBegin = new DateTimePicker();
             labelTotalData = new Label();
             btnInputData = new Button();
             btn_Excel = new Button();
@@ -188,25 +194,12 @@
             Column2 = new DataGridViewTextBoxColumn();
             Column3 = new DataGridViewTextBoxColumn();
             Column4 = new DataGridViewTextBoxColumn();
-            legendPanel = new Panel();
-            label20 = new Label();
-            label19 = new Label();
-            label18 = new Label();
-            label17 = new Label();
-            label2 = new Label();
-            label1 = new Label();
-            legend5 = new Label();
-            legend4 = new Label();
-            legend3 = new Label();
-            legend2 = new Label();
-            legend1 = new Label();
             timer1 = new System.Windows.Forms.Timer(components);
             timer2 = new System.Windows.Forms.Timer(components);
             menuStrip1.SuspendLayout();
             toolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
-            splitContainer1.Panel2.SuspendLayout();
             splitContainer1.SuspendLayout();
             tabControl2.SuspendLayout();
             tabPage4.SuspendLayout();
@@ -230,7 +223,6 @@
             groupBox16.SuspendLayout();
             tabPage6.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
-            legendPanel.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -241,7 +233,7 @@
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Padding = new Padding(7, 2, 0, 2);
-            menuStrip1.Size = new Size(1942, 50);
+            menuStrip1.Size = new Size(1721, 50);
             menuStrip1.TabIndex = 2;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -554,7 +546,7 @@
             toolStrip1.Items.AddRange(new ToolStripItem[] { tSBtnAllowLeft, tSBtnAllowRight, toolStripSeparator3, toolStripButton21, toolStripButton22, toolStripSeparator11, toolStripButton1, toolStripButton2, toolStripButton3, toolStripButton4, toolStripButton5, toolStripButton6, toolStripSeparator4, toolStripButton7, toolStripButton8, toolStripButton9, toolStripButton10, toolStripButton11, toolStripButton12, toolStripSeparator7, toolStripButton13, toolStripButton14, toolStripButton15, toolStripButton16, toolStripSeparator8, toolStripButton17, toolStripButton18, toolStripButton19, toolStripButton20, toolStripSeparator12 });
             toolStrip1.Location = new Point(0, 50);
             toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(1942, 58);
+            toolStrip1.Size = new Size(1721, 58);
             toolStrip1.TabIndex = 3;
             toolStrip1.Text = "toolStrip1";
             // 
@@ -845,12 +837,8 @@
             // splitContainer1.Panel1
             // 
             splitContainer1.Panel1.Controls.Add(tabControl2);
-            // 
-            // splitContainer1.Panel2
-            // 
-            splitContainer1.Panel2.Controls.Add(legendPanel);
-            splitContainer1.Size = new Size(1942, 1021);
-            splitContainer1.SplitterDistance = 776;
+            splitContainer1.Size = new Size(1721, 1119);
+            splitContainer1.SplitterDistance = 575;
             splitContainer1.SplitterWidth = 5;
             splitContainer1.TabIndex = 4;
             // 
@@ -866,7 +854,7 @@
             tabControl2.Margin = new Padding(4);
             tabControl2.Name = "tabControl2";
             tabControl2.SelectedIndex = 0;
-            tabControl2.Size = new Size(774, 1019);
+            tabControl2.Size = new Size(573, 1117);
             tabControl2.TabIndex = 2;
             // 
             // tabPage4
@@ -881,7 +869,7 @@
             tabPage4.Margin = new Padding(4);
             tabPage4.Name = "tabPage4";
             tabPage4.Padding = new Padding(4);
-            tabPage4.Size = new Size(766, 973);
+            tabPage4.Size = new Size(565, 1071);
             tabPage4.TabIndex = 0;
             tabPage4.Text = "发送指令";
             // 
@@ -896,7 +884,7 @@
             groupBox9.Margin = new Padding(4);
             groupBox9.Name = "groupBox9";
             groupBox9.Padding = new Padding(4);
-            groupBox9.Size = new Size(758, 191);
+            groupBox9.Size = new Size(557, 191);
             groupBox9.TabIndex = 10;
             groupBox9.TabStop = false;
             groupBox9.Text = "水罐管理类指令：";
@@ -961,7 +949,7 @@
             groupBox10.Margin = new Padding(4);
             groupBox10.Name = "groupBox10";
             groupBox10.Padding = new Padding(4);
-            groupBox10.Size = new Size(758, 192);
+            groupBox10.Size = new Size(557, 192);
             groupBox10.TabIndex = 9;
             groupBox10.TabStop = false;
             groupBox10.Text = "自动清洗类指令：";
@@ -1028,7 +1016,7 @@
             groupBox11.Margin = new Padding(4);
             groupBox11.Name = "groupBox11";
             groupBox11.Padding = new Padding(4);
-            groupBox11.Size = new Size(758, 260);
+            groupBox11.Size = new Size(557, 260);
             groupBox11.TabIndex = 8;
             groupBox11.TabStop = false;
             groupBox11.Text = "换能器伸缩类指令：";
@@ -1119,7 +1107,7 @@
             groupBox12.Margin = new Padding(4);
             groupBox12.Name = "groupBox12";
             groupBox12.Padding = new Padding(4);
-            groupBox12.Size = new Size(758, 260);
+            groupBox12.Size = new Size(557, 260);
             groupBox12.TabIndex = 7;
             groupBox12.TabStop = false;
             groupBox12.Text = "支架收放类指令：";
@@ -1205,7 +1193,7 @@
             tabPage5.Margin = new Padding(4);
             tabPage5.Name = "tabPage5";
             tabPage5.Padding = new Padding(4);
-            tabPage5.Size = new Size(766, 973);
+            tabPage5.Size = new Size(524, 1071);
             tabPage5.TabIndex = 1;
             tabPage5.Text = "设备状态";
             tabPage5.UseVisualStyleBackColor = true;
@@ -1220,7 +1208,7 @@
             tabControl3.Margin = new Padding(4);
             tabControl3.Name = "tabControl3";
             tabControl3.SelectedIndex = 0;
-            tabControl3.Size = new Size(758, 591);
+            tabControl3.Size = new Size(516, 689);
             tabControl3.TabIndex = 2;
             // 
             // tabPage7
@@ -1233,7 +1221,7 @@
             tabPage7.Margin = new Padding(4);
             tabPage7.Name = "tabPage7";
             tabPage7.Padding = new Padding(4);
-            tabPage7.Size = new Size(750, 545);
+            tabPage7.Size = new Size(508, 643);
             tabPage7.TabIndex = 0;
             tabPage7.Text = "设备1";
             tabPage7.UseVisualStyleBackColor = true;
@@ -1246,7 +1234,7 @@
             groupBox22.Margin = new Padding(4);
             groupBox22.Name = "groupBox22";
             groupBox22.Padding = new Padding(4);
-            groupBox22.Size = new Size(742, 192);
+            groupBox22.Size = new Size(500, 192);
             groupBox22.TabIndex = 8;
             groupBox22.TabStop = false;
             groupBox22.Text = "实时位置数据：";
@@ -1270,7 +1258,7 @@
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Absolute, 37F));
-            tableLayoutPanel2.Size = new Size(734, 156);
+            tableLayoutPanel2.Size = new Size(492, 156);
             tableLayoutPanel2.TabIndex = 1;
             // 
             // label12
@@ -1281,7 +1269,7 @@
             label12.Location = new Point(4, 87);
             label12.Margin = new Padding(4, 0, 4, 0);
             label12.Name = "label12";
-            label12.Size = new Size(726, 29);
+            label12.Size = new Size(484, 29);
             label12.TabIndex = 3;
             // 
             // label13
@@ -1292,7 +1280,7 @@
             label13.Location = new Point(4, 58);
             label13.Margin = new Padding(4, 0, 4, 0);
             label13.Name = "label13";
-            label13.Size = new Size(726, 29);
+            label13.Size = new Size(484, 29);
             label13.TabIndex = 2;
             // 
             // label14
@@ -1303,7 +1291,7 @@
             label14.Location = new Point(4, 29);
             label14.Margin = new Padding(4, 0, 4, 0);
             label14.Name = "label14";
-            label14.Size = new Size(726, 29);
+            label14.Size = new Size(484, 29);
             label14.TabIndex = 1;
             // 
             // label15
@@ -1315,7 +1303,7 @@
             label15.Location = new Point(4, 0);
             label15.Margin = new Padding(4, 0, 4, 0);
             label15.Name = "label15";
-            label15.Size = new Size(726, 29);
+            label15.Size = new Size(484, 29);
             label15.TabIndex = 0;
             // 
             // label16
@@ -1326,7 +1314,7 @@
             label16.Location = new Point(4, 116);
             label16.Margin = new Padding(4, 0, 4, 0);
             label16.Name = "label16";
-            label16.Size = new Size(726, 40);
+            label16.Size = new Size(484, 40);
             label16.TabIndex = 4;
             // 
             // groupBox21
@@ -1338,7 +1326,7 @@
             groupBox21.Margin = new Padding(4);
             groupBox21.Name = "groupBox21";
             groupBox21.Padding = new Padding(4);
-            groupBox21.Size = new Size(742, 108);
+            groupBox21.Size = new Size(500, 108);
             groupBox21.TabIndex = 7;
             groupBox21.TabStop = false;
             groupBox21.Text = "测深仪状态：";
@@ -1376,7 +1364,7 @@
             groupBox19.Margin = new Padding(4);
             groupBox19.Name = "groupBox19";
             groupBox19.Padding = new Padding(4);
-            groupBox19.Size = new Size(742, 108);
+            groupBox19.Size = new Size(500, 108);
             groupBox19.TabIndex = 5;
             groupBox19.TabStop = false;
             groupBox19.Text = "支架状态：";
@@ -1415,7 +1403,7 @@
             tabPage8.Margin = new Padding(4);
             tabPage8.Name = "tabPage8";
             tabPage8.Padding = new Padding(4);
-            tabPage8.Size = new Size(750, 551);
+            tabPage8.Size = new Size(692, 649);
             tabPage8.TabIndex = 1;
             tabPage8.Text = "设备2";
             tabPage8.UseVisualStyleBackColor = true;
@@ -1428,7 +1416,7 @@
             groupBox17.Margin = new Padding(4);
             groupBox17.Name = "groupBox17";
             groupBox17.Padding = new Padding(4);
-            groupBox17.Size = new Size(742, 192);
+            groupBox17.Size = new Size(684, 192);
             groupBox17.TabIndex = 4;
             groupBox17.TabStop = false;
             groupBox17.Text = "实时位置数据：";
@@ -1452,7 +1440,7 @@
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 37F));
-            tableLayoutPanel1.Size = new Size(734, 156);
+            tableLayoutPanel1.Size = new Size(676, 156);
             tableLayoutPanel1.TabIndex = 1;
             // 
             // label8
@@ -1463,7 +1451,7 @@
             label8.Location = new Point(4, 87);
             label8.Margin = new Padding(4, 0, 4, 0);
             label8.Name = "label8";
-            label8.Size = new Size(726, 29);
+            label8.Size = new Size(668, 29);
             label8.TabIndex = 3;
             // 
             // label7
@@ -1474,7 +1462,7 @@
             label7.Location = new Point(4, 58);
             label7.Margin = new Padding(4, 0, 4, 0);
             label7.Name = "label7";
-            label7.Size = new Size(726, 29);
+            label7.Size = new Size(668, 29);
             label7.TabIndex = 2;
             // 
             // label6
@@ -1485,7 +1473,7 @@
             label6.Location = new Point(4, 29);
             label6.Margin = new Padding(4, 0, 4, 0);
             label6.Name = "label6";
-            label6.Size = new Size(726, 29);
+            label6.Size = new Size(668, 29);
             label6.TabIndex = 1;
             // 
             // label5
@@ -1497,7 +1485,7 @@
             label5.Location = new Point(4, 0);
             label5.Margin = new Padding(4, 0, 4, 0);
             label5.Name = "label5";
-            label5.Size = new Size(726, 29);
+            label5.Size = new Size(668, 29);
             label5.TabIndex = 0;
             // 
             // label11
@@ -1508,7 +1496,7 @@
             label11.Location = new Point(4, 116);
             label11.Margin = new Padding(4, 0, 4, 0);
             label11.Name = "label11";
-            label11.Size = new Size(726, 40);
+            label11.Size = new Size(668, 40);
             label11.TabIndex = 4;
             // 
             // groupBox13
@@ -1520,7 +1508,7 @@
             groupBox13.Margin = new Padding(4);
             groupBox13.Name = "groupBox13";
             groupBox13.Padding = new Padding(4);
-            groupBox13.Size = new Size(742, 108);
+            groupBox13.Size = new Size(684, 108);
             groupBox13.TabIndex = 3;
             groupBox13.TabStop = false;
             groupBox13.Text = "测深仪状态：";
@@ -1558,7 +1546,7 @@
             groupBox15.Margin = new Padding(4);
             groupBox15.Name = "groupBox15";
             groupBox15.Padding = new Padding(4);
-            groupBox15.Size = new Size(742, 108);
+            groupBox15.Size = new Size(684, 108);
             groupBox15.TabIndex = 1;
             groupBox15.TabStop = false;
             groupBox15.Text = "支架状态：";
@@ -1600,7 +1588,7 @@
             groupBox18.Margin = new Padding(4);
             groupBox18.Name = "groupBox18";
             groupBox18.Padding = new Padding(4);
-            groupBox18.Size = new Size(758, 188);
+            groupBox18.Size = new Size(516, 188);
             groupBox18.TabIndex = 1;
             groupBox18.TabStop = false;
             groupBox18.Text = "数据设置：";
@@ -1680,7 +1668,7 @@
             groupBox16.Margin = new Padding(4);
             groupBox16.Name = "groupBox16";
             groupBox16.Padding = new Padding(4);
-            groupBox16.Size = new Size(758, 186);
+            groupBox16.Size = new Size(516, 186);
             groupBox16.TabIndex = 0;
             groupBox16.TabStop = false;
             groupBox16.Text = "服务端连接状态：";
@@ -1769,6 +1757,12 @@
             // 
             // tabPage6
             // 
+            tabPage6.Controls.Add(btnChart);
+            tabPage6.Controls.Add(btnSearch);
+            tabPage6.Controls.Add(label2);
+            tabPage6.Controls.Add(label1);
+            tabPage6.Controls.Add(dateTimePickerEnd);
+            tabPage6.Controls.Add(dateTimePickerBegin);
             tabPage6.Controls.Add(labelTotalData);
             tabPage6.Controls.Add(btnInputData);
             tabPage6.Controls.Add(btn_Excel);
@@ -1777,27 +1771,85 @@
             tabPage6.Margin = new Padding(4);
             tabPage6.Name = "tabPage6";
             tabPage6.Padding = new Padding(4);
-            tabPage6.Size = new Size(766, 973);
+            tabPage6.Size = new Size(524, 1071);
             tabPage6.TabIndex = 2;
             tabPage6.Text = "数据报表";
             tabPage6.UseVisualStyleBackColor = true;
+            // 
+            // btnChart
+            // 
+            btnChart.Anchor = AnchorStyles.None;
+            btnChart.Location = new Point(446, 987);
+            btnChart.Margin = new Padding(0);
+            btnChart.Name = "btnChart";
+            btnChart.Size = new Size(155, 55);
+            btnChart.TabIndex = 9;
+            btnChart.Text = "查看报表图";
+            btnChart.UseVisualStyleBackColor = true;
+            btnChart.Click += btnChart_Click;
+            // 
+            // btnSearch
+            // 
+            btnSearch.Anchor = AnchorStyles.None;
+            btnSearch.Location = new Point(-82, 987);
+            btnSearch.Margin = new Padding(0);
+            btnSearch.Name = "btnSearch";
+            btnSearch.Size = new Size(155, 55);
+            btnSearch.TabIndex = 8;
+            btnSearch.Text = "查询";
+            btnSearch.UseVisualStyleBackColor = true;
+            btnSearch.Click += btnSearch_Click;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(10, 906);
+            label2.Name = "label2";
+            label2.Size = new Size(101, 30);
+            label2.TabIndex = 7;
+            label2.Text = "结束时间";
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Font = new Font("Microsoft YaHei UI", 11F, FontStyle.Regular, GraphicsUnit.Point);
+            label1.Location = new Point(10, 859);
+            label1.Name = "label1";
+            label1.Size = new Size(101, 30);
+            label1.TabIndex = 6;
+            label1.Text = "开始时间";
+            // 
+            // dateTimePickerEnd
+            // 
+            dateTimePickerEnd.Location = new Point(146, 901);
+            dateTimePickerEnd.Name = "dateTimePickerEnd";
+            dateTimePickerEnd.Size = new Size(300, 35);
+            dateTimePickerEnd.TabIndex = 5;
+            // 
+            // dateTimePickerBegin
+            // 
+            dateTimePickerBegin.Location = new Point(146, 855);
+            dateTimePickerBegin.Name = "dateTimePickerBegin";
+            dateTimePickerBegin.Size = new Size(300, 35);
+            dateTimePickerBegin.TabIndex = 4;
             // 
             // labelTotalData
             // 
             labelTotalData.AutoSize = true;
             labelTotalData.Font = new Font("Microsoft YaHei UI", 11F, FontStyle.Regular, GraphicsUnit.Point);
-            labelTotalData.Location = new Point(4, 868);
+            labelTotalData.Location = new Point(10, 807);
             labelTotalData.Name = "labelTotalData";
-            labelTotalData.Size = new Size(0, 30);
+            labelTotalData.Size = new Size(57, 30);
             labelTotalData.TabIndex = 3;
+            labelTotalData.Text = "总量";
             // 
             // btnInputData
             // 
             btnInputData.Anchor = AnchorStyles.None;
-            btnInputData.Location = new Point(122, 908);
-            btnInputData.Margin = new Padding(2);
+            btnInputData.Location = new Point(272, 987);
+            btnInputData.Margin = new Padding(0);
             btnInputData.Name = "btnInputData";
-            btnInputData.Size = new Size(159, 61);
+            btnInputData.Size = new Size(155, 55);
             btnInputData.TabIndex = 2;
             btnInputData.Text = "导入浅滩数据";
             btnInputData.UseVisualStyleBackColor = true;
@@ -1806,12 +1858,12 @@
             // btn_Excel
             // 
             btn_Excel.Anchor = AnchorStyles.None;
-            btn_Excel.Location = new Point(330, 911);
-            btn_Excel.Margin = new Padding(2);
+            btn_Excel.Location = new Point(94, 987);
+            btn_Excel.Margin = new Padding(0);
             btn_Excel.Name = "btn_Excel";
-            btn_Excel.Size = new Size(159, 61);
+            btn_Excel.Size = new Size(155, 55);
             btn_Excel.TabIndex = 1;
-            btn_Excel.Text = "导出Excel";
+            btn_Excel.Text = "导出报表";
             btn_Excel.UseVisualStyleBackColor = true;
             btn_Excel.Click += btn_Excel_Click;
             // 
@@ -1829,7 +1881,7 @@
             dataGridView1.RowHeadersVisible = false;
             dataGridView1.RowHeadersWidth = 62;
             dataGridView1.RowTemplate.Height = 32;
-            dataGridView1.Size = new Size(758, 846);
+            dataGridView1.Size = new Size(516, 786);
             dataGridView1.TabIndex = 0;
             // 
             // Column1
@@ -1864,135 +1916,11 @@
             Column4.Name = "Column4";
             Column4.ReadOnly = true;
             // 
-            // legendPanel
-            // 
-            legendPanel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            legendPanel.Controls.Add(label20);
-            legendPanel.Controls.Add(label19);
-            legendPanel.Controls.Add(label18);
-            legendPanel.Controls.Add(label17);
-            legendPanel.Controls.Add(label2);
-            legendPanel.Controls.Add(label1);
-            legendPanel.Controls.Add(legend5);
-            legendPanel.Controls.Add(legend4);
-            legendPanel.Controls.Add(legend3);
-            legendPanel.Controls.Add(legend2);
-            legendPanel.Controls.Add(legend1);
-            legendPanel.Location = new Point(1035, 0);
-            legendPanel.Name = "legendPanel";
-            legendPanel.Size = new Size(121, 249);
-            legendPanel.TabIndex = 0;
-            // 
-            // label20
-            // 
-            label20.AutoSize = true;
-            label20.Location = new Point(55, 24);
-            label20.Name = "label20";
-            label20.Size = new Size(49, 24);
-            label20.TabIndex = 10;
-            label20.Text = "10m";
-            // 
-            // label19
-            // 
-            label19.AutoSize = true;
-            label19.Location = new Point(58, 56);
-            label19.Name = "label19";
-            label19.Size = new Size(38, 24);
-            label19.TabIndex = 9;
-            label19.Text = "8m";
-            // 
-            // label18
-            // 
-            label18.AutoSize = true;
-            label18.Location = new Point(58, 96);
-            label18.Name = "label18";
-            label18.Size = new Size(38, 24);
-            label18.TabIndex = 8;
-            label18.Text = "6m";
-            // 
-            // label17
-            // 
-            label17.AutoSize = true;
-            label17.Location = new Point(58, 139);
-            label17.Name = "label17";
-            label17.Size = new Size(38, 24);
-            label17.TabIndex = 7;
-            label17.Text = "4m";
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(58, 175);
-            label2.Name = "label2";
-            label2.Size = new Size(38, 24);
-            label2.TabIndex = 6;
-            label2.Text = "2m";
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(58, 211);
-            label1.Name = "label1";
-            label1.Size = new Size(38, 24);
-            label1.TabIndex = 5;
-            label1.Text = "0m";
-            // 
-            // legend5
-            // 
-            legend5.BackColor = Color.Yellow;
-            legend5.Location = new Point(15, 188);
-            legend5.MaximumSize = new Size(40, 40);
-            legend5.Name = "legend5";
-            legend5.Size = new Size(37, 40);
-            legend5.TabIndex = 4;
-            legend5.Text = "        ";
-            // 
-            // legend4
-            // 
-            legend4.BackColor = Color.GreenYellow;
-            legend4.Location = new Point(15, 148);
-            legend4.MaximumSize = new Size(40, 40);
-            legend4.Name = "legend4";
-            legend4.Size = new Size(37, 40);
-            legend4.TabIndex = 3;
-            legend4.Text = "      ";
-            // 
-            // legend3
-            // 
-            legend3.BackColor = Color.SkyBlue;
-            legend3.Location = new Point(15, 108);
-            legend3.MaximumSize = new Size(40, 40);
-            legend3.Name = "legend3";
-            legend3.Size = new Size(37, 40);
-            legend3.TabIndex = 2;
-            legend3.Text = "      ";
-            // 
-            // legend2
-            // 
-            legend2.BackColor = Color.Coral;
-            legend2.Location = new Point(15, 68);
-            legend2.MaximumSize = new Size(40, 40);
-            legend2.Name = "legend2";
-            legend2.Size = new Size(37, 40);
-            legend2.TabIndex = 1;
-            legend2.Text = "      ";
-            // 
-            // legend1
-            // 
-            legend1.BackColor = Color.MediumSlateBlue;
-            legend1.Location = new Point(15, 28);
-            legend1.Margin = new Padding(0);
-            legend1.MaximumSize = new Size(40, 40);
-            legend1.Name = "legend1";
-            legend1.Size = new Size(37, 40);
-            legend1.TabIndex = 0;
-            legend1.Text = "      ";
-            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1942, 1129);
+            ClientSize = new Size(1721, 1227);
             Controls.Add(splitContainer1);
             Controls.Add(toolStrip1);
             Controls.Add(menuStrip1);
@@ -2000,13 +1928,13 @@
             Margin = new Padding(4);
             Name = "MainForm";
             Text = "水采机矿厚测量系统";
+            WindowState = FormWindowState.Maximized;
             Load += MainForm_Load;
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             toolStrip1.ResumeLayout(false);
             toolStrip1.PerformLayout();
             splitContainer1.Panel1.ResumeLayout(false);
-            splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
             splitContainer1.ResumeLayout(false);
             tabControl2.ResumeLayout(false);
@@ -2044,8 +1972,6 @@
             tabPage6.ResumeLayout(false);
             tabPage6.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
-            legendPanel.ResumeLayout(false);
-            legendPanel.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -2211,17 +2137,11 @@
         private DataGridViewTextBoxColumn Column3;
         private DataGridViewTextBoxColumn Column4;
         private Label labelTotalData;
-        private Panel legendPanel;
-        private Label legend1;
-        private Label legend5;
-        private Label legend4;
-        private Label legend3;
-        private Label legend2;
-        private Label label19;
-        private Label label18;
-        private Label label17;
+        private Button btnSearch;
         private Label label2;
         private Label label1;
-        private Label label20;
+        private DateTimePicker dateTimePickerEnd;
+        private DateTimePicker dateTimePickerBegin;
+        private Button btnChart;
     }
 }

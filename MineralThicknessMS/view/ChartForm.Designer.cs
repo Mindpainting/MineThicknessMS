@@ -63,6 +63,7 @@
             // 
             btn_saveAsImage.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             btn_saveAsImage.BackColor = Color.LimeGreen;
+            btn_saveAsImage.Font = new Font("Microsoft YaHei UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
             btn_saveAsImage.Location = new Point(1566, 1101);
             btn_saveAsImage.Margin = new Padding(0);
             btn_saveAsImage.Name = "btn_saveAsImage";
@@ -70,7 +71,7 @@
             btn_saveAsImage.TabIndex = 1;
             btn_saveAsImage.Text = "保存为图片";
             btn_saveAsImage.UseVisualStyleBackColor = false;
-            btn_saveAsImage.Click += btn_saveAsImage_Click;
+            btn_saveAsImage.Click += Btn_SaveAsImage_Click;
             // 
             // ChartForm
             // 

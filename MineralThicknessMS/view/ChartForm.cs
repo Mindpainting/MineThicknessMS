@@ -10,21 +10,21 @@ namespace MineralThicknessMS.view
         public ChartForm(DateTime dateTimeBegin, DateTime dateTimeEnd)
         {
             InitializeComponent();
-            chartInit(dateTimeBegin, dateTimeEnd);
+            ChartInit(dateTimeBegin, dateTimeEnd);
             btn_saveAsImage.BringToFront();
         }
 
-        public void chartInit(DateTime dateTimeBegin, DateTime dateTimeEnd)
+        public void ChartInit(DateTime dateTimeBegin, DateTime dateTimeEnd)
         {
             //标题
             chart1.Titles.Add("盐池采矿量分析");
-            chart1.Titles[0].Font = new Font("微软雅黑", 12, FontStyle.Bold);
+            chart1.Titles[0].Font = new Font("微软雅黑", 16, FontStyle.Bold);
             chart1.Titles[0].Alignment = ContentAlignment.MiddleCenter;
             //副标题
             chart1.Titles.Add("单位：m³");
             //chart1.Titles[1].Docking = Docking.Left;
             chart1.Titles[1].Alignment = ContentAlignment.TopLeft;
-            chart1.Titles[1].Font = new Font("微软雅黑", 10);
+            chart1.Titles[1].Font = new Font("微软雅黑", 12);
 
             //图表类型及数据
             chart1.Series.Clear();
@@ -40,7 +40,7 @@ namespace MineralThicknessMS.view
 
             //x轴
             chart1.ChartAreas[0].AxisX.Title = "航道编号";
-            chart1.ChartAreas[0].AxisX.TitleFont = new Font("微软雅黑", 10);
+            chart1.ChartAreas[0].AxisX.TitleFont = new Font("微软雅黑", 12);
             chart1.ChartAreas[0].AxisX.TitleForeColor = Color.Black;
             //设置刻度值和间隔
             chart1.ChartAreas[0].AxisX.Minimum = 0;
@@ -82,7 +82,7 @@ namespace MineralThicknessMS.view
             chart1.Legends.Clear();
         }
 
-        public void saveAsImage()
+        public void SaveAsImage()
         {
             // 创建 SaveFileDialog 对象
             SaveFileDialog saveFileDialog = new SaveFileDialog();
@@ -101,9 +101,9 @@ namespace MineralThicknessMS.view
             }
         }
 
-        private void btn_saveAsImage_Click(object sender, EventArgs e)
+        private void Btn_SaveAsImage_Click(object sender, EventArgs e)
         {
-            saveAsImage();
+            SaveAsImage();
         }
     }
 }

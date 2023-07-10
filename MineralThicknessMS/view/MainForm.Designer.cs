@@ -194,12 +194,15 @@
             Column2 = new DataGridViewTextBoxColumn();
             Column3 = new DataGridViewTextBoxColumn();
             Column4 = new DataGridViewTextBoxColumn();
+            parentLegendPanel = new Panel();
+            childLegendPanel = new Panel();
             timer1 = new System.Windows.Forms.Timer(components);
             timer2 = new System.Windows.Forms.Timer(components);
             menuStrip1.SuspendLayout();
             toolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
+            splitContainer1.Panel2.SuspendLayout();
             splitContainer1.SuspendLayout();
             tabControl2.SuspendLayout();
             tabPage4.SuspendLayout();
@@ -223,6 +226,7 @@
             groupBox16.SuspendLayout();
             tabPage6.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
+            parentLegendPanel.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -837,6 +841,10 @@
             // splitContainer1.Panel1
             // 
             splitContainer1.Panel1.Controls.Add(tabControl2);
+            // 
+            // splitContainer1.Panel2
+            // 
+            splitContainer1.Panel2.Controls.Add(parentLegendPanel);
             splitContainer1.Size = new Size(1721, 1119);
             splitContainer1.SplitterDistance = 575;
             splitContainer1.SplitterWidth = 5;
@@ -1193,7 +1201,7 @@
             tabPage5.Margin = new Padding(4);
             tabPage5.Name = "tabPage5";
             tabPage5.Padding = new Padding(4);
-            tabPage5.Size = new Size(524, 1071);
+            tabPage5.Size = new Size(565, 1071);
             tabPage5.TabIndex = 1;
             tabPage5.Text = "设备状态";
             tabPage5.UseVisualStyleBackColor = true;
@@ -1208,7 +1216,7 @@
             tabControl3.Margin = new Padding(4);
             tabControl3.Name = "tabControl3";
             tabControl3.SelectedIndex = 0;
-            tabControl3.Size = new Size(516, 689);
+            tabControl3.Size = new Size(557, 689);
             tabControl3.TabIndex = 2;
             // 
             // tabPage7
@@ -1221,7 +1229,7 @@
             tabPage7.Margin = new Padding(4);
             tabPage7.Name = "tabPage7";
             tabPage7.Padding = new Padding(4);
-            tabPage7.Size = new Size(508, 643);
+            tabPage7.Size = new Size(549, 643);
             tabPage7.TabIndex = 0;
             tabPage7.Text = "设备1";
             tabPage7.UseVisualStyleBackColor = true;
@@ -1234,7 +1242,7 @@
             groupBox22.Margin = new Padding(4);
             groupBox22.Name = "groupBox22";
             groupBox22.Padding = new Padding(4);
-            groupBox22.Size = new Size(500, 192);
+            groupBox22.Size = new Size(541, 192);
             groupBox22.TabIndex = 8;
             groupBox22.TabStop = false;
             groupBox22.Text = "实时位置数据：";
@@ -1258,7 +1266,7 @@
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Absolute, 37F));
-            tableLayoutPanel2.Size = new Size(492, 156);
+            tableLayoutPanel2.Size = new Size(533, 156);
             tableLayoutPanel2.TabIndex = 1;
             // 
             // label12
@@ -1269,7 +1277,7 @@
             label12.Location = new Point(4, 87);
             label12.Margin = new Padding(4, 0, 4, 0);
             label12.Name = "label12";
-            label12.Size = new Size(484, 29);
+            label12.Size = new Size(525, 29);
             label12.TabIndex = 3;
             // 
             // label13
@@ -1280,7 +1288,7 @@
             label13.Location = new Point(4, 58);
             label13.Margin = new Padding(4, 0, 4, 0);
             label13.Name = "label13";
-            label13.Size = new Size(484, 29);
+            label13.Size = new Size(525, 29);
             label13.TabIndex = 2;
             // 
             // label14
@@ -1291,7 +1299,7 @@
             label14.Location = new Point(4, 29);
             label14.Margin = new Padding(4, 0, 4, 0);
             label14.Name = "label14";
-            label14.Size = new Size(484, 29);
+            label14.Size = new Size(525, 29);
             label14.TabIndex = 1;
             // 
             // label15
@@ -1303,7 +1311,7 @@
             label15.Location = new Point(4, 0);
             label15.Margin = new Padding(4, 0, 4, 0);
             label15.Name = "label15";
-            label15.Size = new Size(484, 29);
+            label15.Size = new Size(525, 29);
             label15.TabIndex = 0;
             // 
             // label16
@@ -1314,7 +1322,7 @@
             label16.Location = new Point(4, 116);
             label16.Margin = new Padding(4, 0, 4, 0);
             label16.Name = "label16";
-            label16.Size = new Size(484, 40);
+            label16.Size = new Size(525, 40);
             label16.TabIndex = 4;
             // 
             // groupBox21
@@ -1326,7 +1334,7 @@
             groupBox21.Margin = new Padding(4);
             groupBox21.Name = "groupBox21";
             groupBox21.Padding = new Padding(4);
-            groupBox21.Size = new Size(500, 108);
+            groupBox21.Size = new Size(541, 108);
             groupBox21.TabIndex = 7;
             groupBox21.TabStop = false;
             groupBox21.Text = "测深仪状态：";
@@ -1364,7 +1372,7 @@
             groupBox19.Margin = new Padding(4);
             groupBox19.Name = "groupBox19";
             groupBox19.Padding = new Padding(4);
-            groupBox19.Size = new Size(500, 108);
+            groupBox19.Size = new Size(541, 108);
             groupBox19.TabIndex = 5;
             groupBox19.TabStop = false;
             groupBox19.Text = "支架状态：";
@@ -1403,7 +1411,7 @@
             tabPage8.Margin = new Padding(4);
             tabPage8.Name = "tabPage8";
             tabPage8.Padding = new Padding(4);
-            tabPage8.Size = new Size(692, 649);
+            tabPage8.Size = new Size(549, 649);
             tabPage8.TabIndex = 1;
             tabPage8.Text = "设备2";
             tabPage8.UseVisualStyleBackColor = true;
@@ -1416,7 +1424,7 @@
             groupBox17.Margin = new Padding(4);
             groupBox17.Name = "groupBox17";
             groupBox17.Padding = new Padding(4);
-            groupBox17.Size = new Size(684, 192);
+            groupBox17.Size = new Size(541, 192);
             groupBox17.TabIndex = 4;
             groupBox17.TabStop = false;
             groupBox17.Text = "实时位置数据：";
@@ -1440,7 +1448,7 @@
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 37F));
-            tableLayoutPanel1.Size = new Size(676, 156);
+            tableLayoutPanel1.Size = new Size(533, 156);
             tableLayoutPanel1.TabIndex = 1;
             // 
             // label8
@@ -1451,7 +1459,7 @@
             label8.Location = new Point(4, 87);
             label8.Margin = new Padding(4, 0, 4, 0);
             label8.Name = "label8";
-            label8.Size = new Size(668, 29);
+            label8.Size = new Size(525, 29);
             label8.TabIndex = 3;
             // 
             // label7
@@ -1462,7 +1470,7 @@
             label7.Location = new Point(4, 58);
             label7.Margin = new Padding(4, 0, 4, 0);
             label7.Name = "label7";
-            label7.Size = new Size(668, 29);
+            label7.Size = new Size(525, 29);
             label7.TabIndex = 2;
             // 
             // label6
@@ -1473,7 +1481,7 @@
             label6.Location = new Point(4, 29);
             label6.Margin = new Padding(4, 0, 4, 0);
             label6.Name = "label6";
-            label6.Size = new Size(668, 29);
+            label6.Size = new Size(525, 29);
             label6.TabIndex = 1;
             // 
             // label5
@@ -1485,7 +1493,7 @@
             label5.Location = new Point(4, 0);
             label5.Margin = new Padding(4, 0, 4, 0);
             label5.Name = "label5";
-            label5.Size = new Size(668, 29);
+            label5.Size = new Size(525, 29);
             label5.TabIndex = 0;
             // 
             // label11
@@ -1496,7 +1504,7 @@
             label11.Location = new Point(4, 116);
             label11.Margin = new Padding(4, 0, 4, 0);
             label11.Name = "label11";
-            label11.Size = new Size(668, 40);
+            label11.Size = new Size(525, 40);
             label11.TabIndex = 4;
             // 
             // groupBox13
@@ -1508,7 +1516,7 @@
             groupBox13.Margin = new Padding(4);
             groupBox13.Name = "groupBox13";
             groupBox13.Padding = new Padding(4);
-            groupBox13.Size = new Size(684, 108);
+            groupBox13.Size = new Size(541, 108);
             groupBox13.TabIndex = 3;
             groupBox13.TabStop = false;
             groupBox13.Text = "测深仪状态：";
@@ -1546,7 +1554,7 @@
             groupBox15.Margin = new Padding(4);
             groupBox15.Name = "groupBox15";
             groupBox15.Padding = new Padding(4);
-            groupBox15.Size = new Size(684, 108);
+            groupBox15.Size = new Size(541, 108);
             groupBox15.TabIndex = 1;
             groupBox15.TabStop = false;
             groupBox15.Text = "支架状态：";
@@ -1588,7 +1596,7 @@
             groupBox18.Margin = new Padding(4);
             groupBox18.Name = "groupBox18";
             groupBox18.Padding = new Padding(4);
-            groupBox18.Size = new Size(516, 188);
+            groupBox18.Size = new Size(557, 188);
             groupBox18.TabIndex = 1;
             groupBox18.TabStop = false;
             groupBox18.Text = "数据设置：";
@@ -1668,7 +1676,7 @@
             groupBox16.Margin = new Padding(4);
             groupBox16.Name = "groupBox16";
             groupBox16.Padding = new Padding(4);
-            groupBox16.Size = new Size(516, 186);
+            groupBox16.Size = new Size(557, 186);
             groupBox16.TabIndex = 0;
             groupBox16.TabStop = false;
             groupBox16.Text = "服务端连接状态：";
@@ -1771,7 +1779,7 @@
             tabPage6.Margin = new Padding(4);
             tabPage6.Name = "tabPage6";
             tabPage6.Padding = new Padding(4);
-            tabPage6.Size = new Size(524, 1071);
+            tabPage6.Size = new Size(565, 1071);
             tabPage6.TabIndex = 2;
             tabPage6.Text = "数据报表";
             tabPage6.UseVisualStyleBackColor = true;
@@ -1779,7 +1787,7 @@
             // btnChart
             // 
             btnChart.Anchor = AnchorStyles.None;
-            btnChart.Location = new Point(446, 987);
+            btnChart.Location = new Point(466, 987);
             btnChart.Margin = new Padding(0);
             btnChart.Name = "btnChart";
             btnChart.Size = new Size(155, 55);
@@ -1791,7 +1799,7 @@
             // btnSearch
             // 
             btnSearch.Anchor = AnchorStyles.None;
-            btnSearch.Location = new Point(-82, 987);
+            btnSearch.Location = new Point(-62, 987);
             btnSearch.Margin = new Padding(0);
             btnSearch.Name = "btnSearch";
             btnSearch.Size = new Size(155, 55);
@@ -1846,7 +1854,7 @@
             // btnInputData
             // 
             btnInputData.Anchor = AnchorStyles.None;
-            btnInputData.Location = new Point(272, 987);
+            btnInputData.Location = new Point(292, 987);
             btnInputData.Margin = new Padding(0);
             btnInputData.Name = "btnInputData";
             btnInputData.Size = new Size(155, 55);
@@ -1858,7 +1866,7 @@
             // btn_Excel
             // 
             btn_Excel.Anchor = AnchorStyles.None;
-            btn_Excel.Location = new Point(94, 987);
+            btn_Excel.Location = new Point(114, 987);
             btn_Excel.Margin = new Padding(0);
             btn_Excel.Name = "btn_Excel";
             btn_Excel.Size = new Size(155, 55);
@@ -1881,7 +1889,7 @@
             dataGridView1.RowHeadersVisible = false;
             dataGridView1.RowHeadersWidth = 62;
             dataGridView1.RowTemplate.Height = 32;
-            dataGridView1.Size = new Size(516, 786);
+            dataGridView1.Size = new Size(557, 786);
             dataGridView1.TabIndex = 0;
             // 
             // Column1
@@ -1916,6 +1924,25 @@
             Column4.Name = "Column4";
             Column4.ReadOnly = true;
             // 
+            // parentLegendPanel
+            // 
+            parentLegendPanel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            parentLegendPanel.BackColor = Color.White;
+            parentLegendPanel.Controls.Add(childLegendPanel);
+            parentLegendPanel.Location = new Point(1004, 3);
+            parentLegendPanel.Name = "parentLegendPanel";
+            parentLegendPanel.Size = new Size(130, 428);
+            parentLegendPanel.TabIndex = 0;
+            // 
+            // childLegendPanel
+            // 
+            childLegendPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
+            childLegendPanel.Location = new Point(79, 25);
+            childLegendPanel.Name = "childLegendPanel";
+            childLegendPanel.Size = new Size(29, 370);
+            childLegendPanel.TabIndex = 0;
+            childLegendPanel.Paint += ChildLegendPanel_Paint;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
@@ -1935,6 +1962,7 @@
             toolStrip1.ResumeLayout(false);
             toolStrip1.PerformLayout();
             splitContainer1.Panel1.ResumeLayout(false);
+            splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
             splitContainer1.ResumeLayout(false);
             tabControl2.ResumeLayout(false);
@@ -1972,6 +2000,7 @@
             tabPage6.ResumeLayout(false);
             tabPage6.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
+            parentLegendPanel.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -2143,5 +2172,7 @@
         private DateTimePicker dateTimePickerEnd;
         private DateTimePicker dateTimePickerBegin;
         private Button btnChart;
+        private Panel parentLegendPanel;
+        private Panel childLegendPanel;
     }
 }

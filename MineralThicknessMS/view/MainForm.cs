@@ -6,7 +6,7 @@ using GMap.NET.MapProviders;
 using GMap.NET.WindowsForms.Markers;
 using System.Data;
 using MineralThicknessMS.view;
-
+using System.Drawing.Drawing2D;
 
 namespace MineralThicknessMS
 {
@@ -41,7 +41,7 @@ namespace MineralThicknessMS
             timer2.Start();
             timer2.Tick += new System.EventHandler(time2_Tick);
 
-            gridInMapInit();
+            GridInMapInit();
 
             //mapThread1 = new Thread(new ThreadStart(RenderMap1));
             //mapThread1.Start();
@@ -50,8 +50,55 @@ namespace MineralThicknessMS
             //mapThread2.Start();
         }
 
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            GMapInit();//地图初始化
+        }
+
+        // GMap基础信息初始化
+        public void GMapInit()
+        {
+            gMapControl.Bearing = 0F;
+            gMapControl.CanDragMap = true;
+            gMapControl.Dock = DockStyle.Fill;
+            gMapControl.EmptyTileColor = Color.Navy;
+            gMapControl.GrayScaleMode = true;
+            gMapControl.HelperLineOption = GMap.NET.WindowsForms.HelperLineOptions.DontShow;
+            gMapControl.LevelsKeepInMemory = 5;
+            gMapControl.Location = new Point(0, 0);
+            gMapControl.Margin = new Padding(4);
+            gMapControl.MarkersEnabled = true;
+            gMapControl.MaxZoom = 2;
+            gMapControl.MinZoom = 2;
+            gMapControl.MouseWheelZoomEnabled = true;
+            gMapControl.MouseWheelZoomType = MouseWheelZoomType.MousePositionAndCenter;
+            gMapControl.Name = "gMapControl";
+            gMapControl.NegativeMode = false;
+            gMapControl.PolygonsEnabled = true;
+            gMapControl.RetryLoadTile = 0;
+            gMapControl.RoutesEnabled = true;
+            gMapControl.ScaleMode = GMap.NET.WindowsForms.ScaleModes.Fractional;
+            gMapControl.SelectedAreaFillColor = Color.FromArgb(33, 65, 105, 225);
+            gMapControl.ShowTileGridLines = false;
+            gMapControl.Size = new Size(1859, 1362);
+            gMapControl.TabIndex = 0;
+            splitContainer1.Panel2.Controls.Add(gMapControl);
+            gMapControl.Zoom = 0D;
+
+            //
+            gMapControl.Manager.Mode = AccessMode.ServerAndCache;
+            gMapControl.CacheLocation = Environment.CurrentDirectory + "\\GMapCache\\"; //缓存位置
+            //gMapControl.MapProvider = AMapProvider.Instance; //高德地图
+            gMapControl.MapProvider = GMapProviders.BingSatelliteMap;
+            gMapControl.MinZoom = 2;  //最小比例
+            gMapControl.MaxZoom = 22; //最大比例
+            gMapControl.Zoom = 13;     //当前比例
+            gMapControl.ShowCenter = false; //不显示中心十字点
+            gMapControl.DragButton = MouseButtons.Left; //左键拖拽地图
+            gMapControl.Position = new PointLatLng(40.42734887689348, 90.79702377319336); //地图中心位置
+        }
         //生成网格
-        private void gridInMapInit()
+        private void GridInMapInit()
         {
             // 调接口获取延迟边界数据，绘制边界线
 
@@ -109,6 +156,57 @@ namespace MineralThicknessMS
             gMapControl.Overlays.Add(overlay);
         }
 
+        //绘制图例
+        private void ChildLegendPanel_Paint(object sender, PaintEventArgs e)
+        {
+            // 在子容器的 Panel 的 Paint 事件中进行绘制
+            Graphics graphics = e.Graphics;
+
+            // 定义渐变颜色的起始颜色和结束颜色
+            Color[] colors = { Color.Red, Color.OrangeRed, Color.Orange, Color.Yellow, Color.PaleGreen, Color.SkyBlue, Color.Cyan };
+
+            // 定义每个渐变颜色的位置
+            float[] positions = { 0.0f, 0.1666f, 0.332f, 0.498f, 0.664f, 0.83f, 1.0f };
+
+            // 获取父容器的绘图上下文
+            Graphics parentGraphics = parentLegendPanel.CreateGraphics();
+
+            // 绘制渐变色矩形
+            Rectangle rect = childLegendPanel.ClientRectangle;
+            using LinearGradientBrush brush = new(rect, Color.White, Color.White, LinearGradientMode.Vertical);
+            ColorBlend colorBlend = new()
+            {
+                Colors = colors,
+                Positions = positions
+            };
+            brush.InterpolationColors = colorBlend;
+
+            // 在子容器中绘制渐变色矩形
+            graphics.FillRectangle(brush, rect);
+
+            // 在父容器中绘制刻度线
+            for (int i = 0; i < positions.Length; i++)
+            {
+                int x1 = childLegendPanel.Left;
+                int x2 = childLegendPanel.Left - 10;
+                int y = (int)(childLegendPanel.Top + childLegendPanel.Height * positions[i]);
+
+                // 在父容器的绘图上下文中绘制刻度线
+                parentGraphics.DrawLine(Pens.Black, x1, y, x2, y);
+                // 绘制文本
+                string text = $"{3 - 0.5 * i}m";
+                SizeF textSize = parentGraphics.MeasureString(text, Font);
+                PointF textPosition = new(x1 - childLegendPanel.Width * 2.5f, y - textSize.Height / 2);
+                // 设置文本对齐方式为左对齐
+                StringFormat format = new()
+                {
+                    Alignment = StringAlignment.Near,
+                    LineAlignment = StringAlignment.Center
+                };
+                parentGraphics.DrawString(text, Font, Brushes.Black, textPosition);
+            }
+        }
+
         private void time2_Tick(object sender, EventArgs e)
         {
             Task.Run(() =>
@@ -128,53 +226,6 @@ namespace MineralThicknessMS
             }
             labelTotalData.Text = "时间段内本盐池采矿总量为:" + (Math.Round(sum, 2)).ToString() + "m³";
             dataGridView1.DataSource = ds;
-        }
-
-        private void MainForm_Load(object sender, EventArgs e)
-        {
-            GMapInit();//地图初始化
-        }
-        // GMap基础信息初始化
-        public void GMapInit()
-        {
-            gMapControl.Bearing = 0F;
-            gMapControl.CanDragMap = true;
-            gMapControl.Dock = DockStyle.Fill;
-            gMapControl.EmptyTileColor = Color.Navy;
-            gMapControl.GrayScaleMode = true;
-            gMapControl.HelperLineOption = GMap.NET.WindowsForms.HelperLineOptions.DontShow;
-            gMapControl.LevelsKeepInMemory = 5;
-            gMapControl.Location = new Point(0, 0);
-            gMapControl.Margin = new Padding(4);
-            gMapControl.MarkersEnabled = true;
-            gMapControl.MaxZoom = 2;
-            gMapControl.MinZoom = 2;
-            gMapControl.MouseWheelZoomEnabled = true;
-            gMapControl.MouseWheelZoomType = MouseWheelZoomType.MousePositionAndCenter;
-            gMapControl.Name = "gMapControl";
-            gMapControl.NegativeMode = false;
-            gMapControl.PolygonsEnabled = true;
-            gMapControl.RetryLoadTile = 0;
-            gMapControl.RoutesEnabled = true;
-            gMapControl.ScaleMode = GMap.NET.WindowsForms.ScaleModes.Fractional;
-            gMapControl.SelectedAreaFillColor = Color.FromArgb(33, 65, 105, 225);
-            gMapControl.ShowTileGridLines = false;
-            gMapControl.Size = new Size(1859, 1362);
-            gMapControl.TabIndex = 0;
-            splitContainer1.Panel2.Controls.Add(gMapControl);
-            gMapControl.Zoom = 0D;
-
-            //
-            gMapControl.Manager.Mode = AccessMode.ServerAndCache;
-            gMapControl.CacheLocation = Environment.CurrentDirectory + "\\GMapCache\\"; //缓存位置
-            //gMapControl.MapProvider = AMapProvider.Instance; //高德地图
-            gMapControl.MapProvider = GMapProviders.BingSatelliteMap;
-            gMapControl.MinZoom = 2;  //最小比例
-            gMapControl.MaxZoom = 22; //最大比例
-            gMapControl.Zoom = 13;     //当前比例
-            gMapControl.ShowCenter = false; //不显示中心十字点
-            gMapControl.DragButton = MouseButtons.Left; //左键拖拽地图
-            gMapControl.Position = new PointLatLng(40.42734887689348, 90.79702377319336); //地图中心位置
         }
 
         private void time1_Tick(object sender, EventArgs e)
@@ -317,17 +368,29 @@ namespace MineralThicknessMS
                             {
                                 targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.White));
                             }
-                            else if (avgMT[i] > 0 && avgMT[i] <= 5)
+                            else if (avgMT[i] > 0 && avgMT[i] <= 0.5)
                             {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Green));
+                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Cyan));
                             }
-                            else if (avgMT[i] > 5 && avgMT[i] <= 10)
+                            else if (avgMT[i] > 0.5 && avgMT[i] <= 1)
                             {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.YellowGreen));
+                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.SkyBlue));
                             }
-                            else if (avgMT[i] > 10 && avgMT[i] <= 15)
+                            else if (avgMT[i] > 1 && avgMT[i] <= 1.5)
                             {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Blue));
+                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.PaleGreen));
+                            }
+                            else if (avgMT[i] > 1.5 && avgMT[i] <= 2)
+                            {
+                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Yellow));
+                            }
+                            else if (avgMT[i] > 2 && avgMT[i] <= 2.5)
+                            {
+                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Orange));
+                            }
+                            else if (avgMT[i] > 2.5 && avgMT[i] <= 3)
+                            {
+                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.OrangeRed));
                             }
                             else
                             {

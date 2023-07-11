@@ -7,6 +7,7 @@ using GMap.NET.WindowsForms.Markers;
 using System.Data;
 using MineralThicknessMS.view;
 using System.Drawing.Drawing2D;
+using System.Windows.Forms;
 
 namespace MineralThicknessMS
 {
@@ -217,15 +218,29 @@ namespace MineralThicknessMS
 
         private void btnSearch_Click(object sender, EventArgs e)
         {
-            System.Data.DataTable ds = DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
-            double sum = 0;
-            foreach (DataRow row in ds.Rows)
+            DataAnalysis.subMine = DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
+
+
+            DataAnalysis.totalSubMine = DataAnalysis.SumAverageElevation(DataAnalysis.subMine);
+            labelTotalData.Text = "时间段内本盐池采矿总量为:" + (Math.Round(DataAnalysis.totalSubMine, 2)).ToString() + "m³";
+
+            dataGridView1.Rows.Clear();
+
+            foreach (Produce produce in DataAnalysis.subMine)
             {
-                double x = MsgDecode.StrConvertToDou(row[1]);
-                sum += x;
+                DataGridViewRow row = new DataGridViewRow();
+                row.CreateCells(dataGridView1);
+
+                // 设置固定值到特定的单元格
+                row.Cells[0].Value = produce.Channel;
+                row.Cells[1].Value = produce.AverageElevation;
+
+                // 设置 Produce 对象的其他属性值
+                row.Cells[2].Value = dateTimePickerBegin.Value.ToShortDateString();
+                row.Cells[3].Value = dateTimePickerEnd.Value.ToShortDateString();
+
+                dataGridView1.Rows.Add(row);
             }
-            labelTotalData.Text = "时间段内本盐池采矿总量为:" + (Math.Round(sum, 2)).ToString() + "m³";
-            dataGridView1.DataSource = ds;
         }
 
         private void time1_Tick(object sender, EventArgs e)
@@ -642,10 +657,17 @@ namespace MineralThicknessMS
 
         private void btn_Excel_Click(object sender, EventArgs e)
         {
-            DataAnalysis.ExportToExcel(DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value), dateTimePickerBegin.Value, dateTimePickerEnd.Value);
+            if (dataGridView2.Rows.Count == 1)
+            {
+                MessageBox.Show("请先查询报表!");
+            }
+            else
+            {
+                DataAnalysis.ExportToExcel(DataAnalysis.subMine, dateTimePickerBegin.Value, dateTimePickerEnd.Value, DataAnalysis.totalSubMine);
+            }
         }
 
-        //导入浅滩数据按钮
+        //导入雷达数据按钮
         private void btnInputData_Click(object sender, EventArgs e)
         {
             RadarDataInputForm form = new RadarDataInputForm();
@@ -660,26 +682,178 @@ namespace MineralThicknessMS
             {
                 string filePath = openFileDialog.FileName;
 
+                List<LaterPoint> points = new List<LaterPoint>();
+
                 // 调用处理文件的方法，传入选定的文件路径
                 //读出原始数据
-                List<LaterPoint> points = DataAnalysis.ReadRadarAsciiFile(filePath);
+                points = DataAnalysis.ReadRadarAsciiFile(filePath, Status.height2);
 
-                List<Produce> radarProduce = new List<Produce>();
-                radarProduce = DataAnalysis.produceList(points);
-
-                radarProduce = DataAnalysis.SubtractX(radarProduce, Status.height2);
-                DataAnalysis.radarDataInsert(radarProduce);
+                DataAnalysis.radarProduce.Clear();
+                DataAnalysis.radarProduce = DataAnalysis.produceList(points);
 
                 //求出所有格子的矿厚
                 MessageBox.Show("雷达数据读取完成");
             }
         }
 
-        //查看报表图
-        private void btnChart_Click(object sender, EventArgs e)
+        //导入摩托艇数据
+        private void btnInportBoatData_Click(object sender, EventArgs e)
         {
-            ChartForm chartForm = new(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
-            chartForm.ShowDialog();
+            RadarDataInputForm form = new RadarDataInputForm();
+            form.ShowDialog();
+
+            if (DataAnalysis.motorProduce.Count != 0)
+            {
+                OpenFileDialog openFileDialog = new OpenFileDialog();
+                // 设置对话框的标题和过滤器
+                openFileDialog.Title = "选择DAT文件";
+                openFileDialog.Filter = "DAT文件|*dat";
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = openFileDialog.FileName;
+
+                    List<LaterPoint> points = new List<LaterPoint>();
+
+                    // 调用处理文件的方法，传入选定的文件路径
+                    //读出原始数据
+                    points = DataAnalysis.ReadMotorAsciiFile(filePath, Status.height2);
+
+                    DataAnalysis.motorProduce.Clear();
+                    //按航道号，网格编号，平均高程生成记录
+                    DataAnalysis.motorProduce = DataAnalysis.produceList(points);
+
+                    List<Produce> totalProduce = new List<Produce>();
+
+                    int count = DataAnalysis.radarProduce.Count;
+
+                    //合并
+                    totalProduce = DataAnalysis.MergeAndCalculateAverage(DataAnalysis.radarProduce, DataAnalysis.motorProduce);
+
+                    //将平均高程减去盐池底板高度，得到平均矿厚
+                    totalProduce = DataAnalysis.SubtractX(totalProduce, Status.height2);
+
+                    //将记录插入数据库
+                    DataAnalysis.dataInsert(totalProduce);
+
+                    MessageBox.Show("摩托艇数据读取完成");
+                }
+            }
+            else
+            {
+                MessageBox.Show("请先导入雷达数据!");
+            }
+
+        }
+
+        private void searchDayMine_Click(object sender, EventArgs e)
+        {
+            DataAnalysis.dayTotalMine = DataAnalysis.dayMineTable(dateDayTimePicker.Value);
+            DataAnalysis.dayMine = DataAnalysis.SumAverageElevation(DataAnalysis.dayTotalMine);
+
+            labelDayTotalMine.Text = "此时间盐池矿量储量为:" + (Math.Round(DataAnalysis.dayMine, 2)).ToString() + "m³";
+
+            dataGridView2.Rows.Clear();
+
+            foreach (Produce produce in DataAnalysis.dayTotalMine)
+            {
+                DataGridViewRow row = new DataGridViewRow();
+                row.CreateCells(dataGridView2);
+
+                // 设置固定值到特定的单元格
+                row.Cells[0].Value = produce.Channel;
+                row.Cells[1].Value = produce.AverageElevation;
+
+                // 设置 Produce 对象的其他属性值
+                row.Cells[2].Value = dateDayTimePicker.Value.ToShortDateString();
+
+                dataGridView2.Rows.Add(row);
+            }
+        }
+
+        private void btnExportDayExcel_Click(object sender, EventArgs e)
+        {
+            if (dataGridView2.Rows.Count == 1)
+            {
+                MessageBox.Show("请先查询报表!");
+            }
+            else
+            {
+                DataAnalysis.ExportDayMineToExcel(DataAnalysis.dayTotalMine, dateDayTimePicker.Value, DataAnalysis.dayMine);
+            }
+        }
+
+        private void btn3DData_Click(object sender, EventArgs e)
+        {
+            if (dataGridView2.Rows.Count == 1)
+            {
+                MessageBox.Show("请先查询报表!");
+            }
+            else
+            {
+                SaveFileDialog saveFileDialog = new()
+                {
+                    Filter = "文本文件|*.txt|所有文件|*.*", // 可以根据需求设置过滤器
+                    Title = "选择导出文件的保存位置"
+                };
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = saveFileDialog.FileName;
+                    try
+                    {
+                        List<string> lines = new();
+                        List<Produce> produces = DataAnalysis.latestData;
+                        produces.ForEach(produce =>
+                        {
+                            PointXY centerXY = GridView.getCenterXY(produce.Channel, produce.Grid);
+                            string line = $"{centerXY.X},{centerXY.Y},777.666";
+                            lines.Add(line);
+                        });
+
+                        using (StreamWriter writer = new(filePath, true))
+                        {
+                            foreach (string line in lines)
+                            {
+                                writer.WriteLine(line);
+                            }
+                        }
+                        MessageBox.Show("数据导出成功！", "提示");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("数据导出失败：" + ex.Message, "错误");
+                    }
+                }
+            }
+        }
+
+        //查看当日每个航道采矿量报表图
+        private void btnChart1_Click(object sender, EventArgs e)
+        {
+            if (dataGridView2.Rows.Count == 1)
+            {
+                MessageBox.Show("请先查询报表!");
+            }
+            else
+            {
+                ChartForm chartForm = new(DataAnalysis.dayTotalMine);
+                chartForm.ShowDialog();
+            }
+        }
+
+        //查看一个时间段每个航道采矿量报表图
+        private void btnChart2_Click(object sender, EventArgs e)
+        {
+            if (dataGridView2.Rows.Count == 1)
+            {
+                MessageBox.Show("请先查询报表!");
+            }
+            else
+            {
+                ChartForm chartForm = new(DataAnalysis.subMine);
+                chartForm.ShowDialog();
+            }
         }
     }
 }

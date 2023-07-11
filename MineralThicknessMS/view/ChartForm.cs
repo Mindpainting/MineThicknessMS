@@ -7,14 +7,14 @@ namespace MineralThicknessMS.view
 {
     public partial class ChartForm : Form
     {
-        public ChartForm(DateTime dateTimeBegin, DateTime dateTimeEnd)
+        public ChartForm(List<Produce> produces)
         {
             InitializeComponent();
-            ChartInit(dateTimeBegin, dateTimeEnd);
+            ChartInit(produces);
             btn_saveAsImage.BringToFront();
         }
 
-        public void ChartInit(DateTime dateTimeBegin, DateTime dateTimeEnd)
+        public void ChartInit(List<Produce> produces)
         {
             //标题
             chart1.Titles.Add("盐池采矿量分析");
@@ -32,10 +32,9 @@ namespace MineralThicknessMS.view
             chart1.Series["Series1"].ChartType = SeriesChartType.Column;
 
             // 添加数据点
-            DataTable dataTable = DataAnalysis.mineTable(dateTimeBegin, dateTimeEnd);
-            foreach (DataRow row in dataTable.Rows)
+            foreach (Produce produce in produces)
             {
-                chart1.Series["Series1"].Points.AddXY(row[0], Convert.ToDouble(row[1]));
+                chart1.Series["Series1"].Points.AddXY(produce.Channel, produce.AverageElevation);
             }
 
             //x轴
@@ -61,8 +60,8 @@ namespace MineralThicknessMS.view
             //chart1.ChartAreas[0].AxisY.TitleForeColor = Color.Black;
             //刻度值和间隔
             chart1.ChartAreas[0].AxisY.Minimum = 0;
-            chart1.ChartAreas[0].AxisY.Maximum = 12000;
-            chart1.ChartAreas[0].AxisY.Interval = 2000;
+            chart1.ChartAreas[0].AxisY.Maximum = 30000;
+            chart1.ChartAreas[0].AxisY.Interval = 5000;
 
 
             // 隐藏水平网格线
@@ -103,7 +102,15 @@ namespace MineralThicknessMS.view
 
         private void Btn_SaveAsImage_Click(object sender, EventArgs e)
         {
-            SaveAsImage();
+            try
+            {
+                SaveAsImage();
+                MessageBox.Show("图片保存成功！", "提示");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("图片保存成功：" + ex.Message, "错误");
+            }
         }
     }
 }

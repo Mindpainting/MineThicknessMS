@@ -1,4 +1,6 @@
 ﻿using GMap.NET;
+using MineralThicknessMS.entity;
+
 namespace MineralThicknessMS.service
 {
     public class GridView
@@ -58,12 +60,18 @@ namespace MineralThicknessMS.service
                         double rux = -(i + 1) * Xwidth + -j * Xheight + LeftUp.X;
                         double ruy = -(i + 1) * Ywidth + -j * Yheight + LeftUp.Y;
 
+                        Grid grid = new()
+                        {
+                            Id = i * YGridCount + j + 1,
+                            CenterX = (lux + rux + ldx + rdx) / 4,
+                            CenterY = (luy + ruy + ldy + rdy) / 4
+                        };
+
                         PointXY lu = new(lux, luy);
                         PointXY ld = new(ldx, ldy);
                         PointXY rd = new(rdx, rdy);
                         PointXY ru = new(rux, ruy);
 
-                        Grid grid = new();
                         grid.Id = i * YGridCount + j + 1;
                         List<PointXY> gridPoints = new()
                         {
@@ -213,28 +221,44 @@ namespace MineralThicknessMS.service
             GpsXY.GaussXY_BL(GpsXY.m_Cs0, point.X, point.Y, out double B, out double L);
             return new PointLatLng(B, L);
         }
+
+        //返回给定航道网格的中心点平面坐标
+        public static PointXY getCenterXY(int channelId, int gridId)
+        {
+            PointXY xy = new(0, 0);
+            Status.grids.ForEach(aChannelGrids =>
+            {
+                if (aChannelGrids.First().Column == channelId)
+                {
+                    aChannelGrids.ForEach(grid => {
+                        if (grid.Row == gridId)
+                        {
+                            xy.X = grid.CenterX;
+                            xy.Y = grid.CenterY;
+                        }
+                    });
+                }
+            });
+            return xy;
+        }
     }
 
     public class Grid
     {
         private int id;
-        private int row;//行
-        private int column;//列
-        private List<PointLatLng> pointLatLngs = new();
-        public Grid()
-        {
-        }
-        public Grid(int id, int row, int column)
-        {
-            Id = id;
-            Row = row;
-            Column = column;
-        }
+        private int row;//行（格子编号）
+        private int column;//列（航道编号）
+        private double centerX;
+        private double centerY;
+        private List<PointLatLng> pointLatLngs = new();//格子四个角点（deg）
+        public Grid() { }
 
         public int Id { get => id; set => id = value; }
         public int Row { get => row; set => row = value; }
         public int Column { get => column; set => column = value; }
         public List<PointLatLng> PointLatLngs { get => pointLatLngs; set => pointLatLngs = value; }
+        public double CenterX { get => centerX; set => centerX = value; }
+        public double CenterY { get => centerY; set => centerY = value; }
     }
 
     //盐池四个角点类

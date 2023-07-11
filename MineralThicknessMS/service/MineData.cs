@@ -17,12 +17,25 @@ using OfficeOpenXml.Drawing.Chart;
 using System.Drawing.Imaging;
 using System.Reflection;
 using OfficeOpenXml.Style;
+using System.Threading.Channels;
 
 namespace MineralThicknessMS.service
 {
     public class DataAnalysis
     {
-       //更新每个网格实时信息 => mproduce表
+        public static List<Produce> motorProduce = new List<Produce>();
+        public static List<Produce> radarProduce = new List<Produce>();
+
+        //按时间段查询到的数据
+        public static List<Produce> subMine = new List<Produce>();
+        public static double totalSubMine = 0;
+
+        //按时间查询到的数据
+        public static List<Produce> dayTotalMine = new List<Produce>();
+        public static List<Produce> latestData = new List<Produce>();
+        public static double dayMine = 0;
+
+        //更新每个网格实时信息 => mproduce表
         public static void updateMineAvg()
         {
             //找出test表中今天的所有数据
@@ -67,7 +80,7 @@ namespace MineralThicknessMS.service
                         data.Add(dataMsg);
                     }
 
-                    double avgSub = 0, avgAdd;
+                    double avgSub = 0, avgAdd = 0, avgMinGroup = 0;
 
                     try
                     {
@@ -88,6 +101,7 @@ namespace MineralThicknessMS.service
                         //采矿量
                         double avg = clusterSum1 / clusters[1].Count - clusterSum0 / clusters[0].Count;
                         avgSub = avg > 0 ? avg : -avg;
+                        avgMinGroup = clusterSum1 / clusters[1].Count < clusterSum0 / clusters[0].Count ? clusterSum1 / clusters[1].Count : clusterSum0 / clusters[0].Count;      
 
                         //矿量储量
                         avgAdd = (clusterSum1 + clusterSum0) / (clusters[1].Count + clusters[0].Count);
@@ -111,120 +125,55 @@ namespace MineralThicknessMS.service
                     //sum代表今天开采有无该网格信息(mproduce)
                     int sum = Convert.ToInt32(dsIsToday.Tables[0].Rows[0][0]);
 
-                    //mproduce今天没有该网格信息，且今天有采前采后数据(avgSub >= 0.3)，则添加
-                    //将差值设置为采矿量（avg_mine_produce）
+                    //mproduce今天没有该网格信息，且今天有采前采后数据(avgSub >= 0.3)，则添加较小组的平均值(采后的)
                     if (sum == 0 && avgSub >= 0.3)
                     {
-                        string sqlStrInsertProduceToday = "insert into mproduce(date_time,avg_mine_produce,waterway_id,rectangle_id,flag,update_time) " +
-                        "values(NOW(),@avgMineProduce,@waterwayId,@rectangleId,1,NOW())";
+                        string sqlStrInsertProduceToday = "insert into mproduce(date_time,avg_mine_depth,waterway_id,rectangle_id) " +
+                        "values(NOW(),@avgMineDepth,@waterwayId,@rectangleId)";
 
                         MySqlParameter[] paramInsertProduceToday = new MySqlParameter[]
                         {
-                            new MySqlParameter("@avgMineProduce",avgSub),
+                            new MySqlParameter("@avgMineDepth",avgMinGroup),
                             new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
                             new MySqlParameter("@rectangleId",data[0].getRectangleId()),
                         };
                         MySQLHelper.ExecSql(sqlStrInsertProduceToday, paramInsertProduceToday);
                     }
-                    //mproduce今天有该网格信息，且今天有采前采后数据(avgSub >= 0.3),则更新
+                    //mproduce今天有该网格信息，且今天有采前采后数据(avgSub >= 0.3),则继续使用较小组的平均值更新
                     else if (sum > 0 && avgSub >= 0.3)
                     {
-                        string sqlStrUpdateProduceToday = "update mproduce set avg_mine_produce = @avgMineProduce,flag = 1,update_time = NOW() " +
+                        string sqlStrUpdateProduceToday = "update mproduce set avg_mine_depth = @avgMineDepth " +
                             "where waterway_id = @waterwayId and rectangle_id = @rectangleId";
                         MySqlParameter[] paramUpdateProduceToday = new MySqlParameter[]
                         {
-                            new MySqlParameter("@avgMineProduce",avgSub),
+                            new MySqlParameter("@avgMineDepth",avgMinGroup),
                             new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
                             new MySqlParameter("@rectangleId",data[0].getRectangleId()),
                         };
                         MySQLHelper.ExecSqlQuery(sqlStrUpdateProduceToday, paramUpdateProduceToday);
                     }
-                    //
-                    //mproduce今天没有该网格信息，采前采后数据今天不同时存在(avgSub < 0.3)
+                    //mproduce今天没有该网格信息，采前采后数据今天不同时存在，直接添加平均值代表矿厚
                     else if (sum == 0 && avgSub < 0.3)
                     {
-                        //找历史中是否有该网格的数据
-                        string sqlStrSelectHisData = "SELECT count(*) from mproduce WHERE waterway_id = @waterwayId " +
-                            "and rectangle_id = @rectangleId";
-                        MySqlParameter[] paramSelectHisData = new MySqlParameter[]
+                        string sqlStrInsertProduceToday = "insert into mproduce(date_time,avg_mine_depth,waterway_id,rectangle_id) " +
+                        "values(NOW(),@avgMineDepth,@waterwayId,@rectangleId)";
+
+                        MySqlParameter[] paramInsertProduceToday = new MySqlParameter[]
                         {
+                            new MySqlParameter("@avgMineDepth",avgAdd),
                             new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
                             new MySqlParameter("@rectangleId",data[0].getRectangleId()),
                         };
-
-                        DataSet ds3 = MySQLHelper.ExecSqlQuery(sqlStrSelectHisData, paramSelectHisData);
-
-                        int count = Convert.ToInt32(ds3.Tables[0].Rows[0][0]);
-
-                        //代表没有该网格的历史记录，将数据记录到今天
-                        if (count == 0)
-                        {
-                            string sqlStr3 = "insert into mproduce(date_time,avg_mine_reserve,waterway_id,rectangle_id,flag,update_time) " +
-                            "values(NOW(),@avgMineReserves,@waterwayId,@rectangleId,0,NOW())";
-                            MySqlParameter[] param1 = new MySqlParameter[]
-                            {
-                                new MySqlParameter("@avgMineReserves",avgAdd),
-                                new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
-                                new MySqlParameter("@rectangleId",data[0].getRectangleId()),
-                            };
-                            MySQLHelper.ExecSqlQuery(sqlStr3, param1);
-                        }
-                        //代表有该网格的历史记录
-                        else if (count == 1)
-                        {
-                            //看历史记录中的flag
-                            string sqlStrFlagUpdateTime = "SELECT flag,Date(update_time),CURDATE(),avg_mine_reserve FROM mproduce WHERE waterway_id = @waterwayId " +
-                                "and rectangle_id = @rectangleId ORDER BY date_time DESC LIMIT 1";
-                            MySqlParameter[] paramFlagUpdateTime = new MySqlParameter[]
-                            {
-                                new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
-                                new MySqlParameter("@rectangleId",data[0].getRectangleId()),
-                            };
-                            DataSet dsFlagUpdateTime = MySQLHelper.ExecSqlQuery(sqlStrFlagUpdateTime, paramFlagUpdateTime);
-
-                            int flag = (int)dsFlagUpdateTime.Tables[0].Rows[0][0];
-                            bool isUpdateToday = (DateTime)dsFlagUpdateTime.Tables[0].Rows[0][1] == (DateTime)dsFlagUpdateTime.Tables[0].Rows[0][2];
-                            double avgMineReserve = (double)dsFlagUpdateTime.Tables[0].Rows[0][3];
-
-                            //flag不是今天修改的，将数据记录到今天
-                            if (flag == 1 && isUpdateToday == false)
-                            {
-                                string sqlStrUpdateHisData = "insert into mproduce(date_time,avg_mine_reserve,waterway_id,rectangle_id,flag,update_time) " +
-                                "values(NOW(),@avgMineReserves,@waterwayId,@rectangleId,0,NOW())";
-                                MySqlParameter[] paramUpdateHisData = new MySqlParameter[]
-                                {
-                                new MySqlParameter("@avgMineReserves",avgAdd),
-                                new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
-                                new MySqlParameter("@rectangleId",data[0].getRectangleId()),
-                                };
-                                MySQLHelper.ExecSqlQuery(sqlStrUpdateHisData, paramUpdateHisData);
-                            }
-
-                            //flag为0(之前没有采后的数据)，或采后的数据是今天更新的，继续更新
-                            if (flag == 0 || isUpdateToday == true)
-                            {
-                                double avgMineProduce = avgMineReserve - avgAdd;
-
-                                string sqlStrReUpdateHisData = "update mproduce set avg_mine_produce = @avgMineProduce, flag = 1,update_time = NOW() where waterway_id = " +
-                                    "@waterwayId and rectangle_id = @rectangleId ";
-                                MySqlParameter[] paramReUpdateHisData = new MySqlParameter[]
-                                {
-                                    new MySqlParameter("@avgMineProduce",avgMineProduce),
-                                    new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
-                                    new MySqlParameter("@rectangleId",data[0].getRectangleId()),
-                                };
-                                MySQLHelper.ExecSql(sqlStrReUpdateHisData, paramReUpdateHisData);
-                            }
-                        }
+                        MySQLHelper.ExecSql(sqlStrInsertProduceToday, paramInsertProduceToday);
                     }
-                    //mproduce今天有该网格信息，采前采后数据今天不同时存在(avgSub < 0.3),则更新
+                    //mproduce今天有该网格信息，采前采后数据今天不同时存在(avgSub < 0.3),则继续使用平均值更新代表矿厚
                     else if (sum > 0 && avgSub < 0.3)
                     {
-                        string sqlStrUpdateToday = "update mproduce set avg_mine_reserve = @avgMineReserve,date_time = NOW(),flag = 0,update_time = NOW() " +
+                        string sqlStrUpdateToday = "update mproduce set avg_mine_depth = @avgMineDepth " +
                         "where waterway_id = @waterwayId and rectangle_id = @rectangleId";
                         MySqlParameter[] paramUpdateToday = new MySqlParameter[]
                         {
-                            new MySqlParameter("@avgMineReserve",avgAdd),
+                            new MySqlParameter("@avgMineDepth",avgAdd),
                             new MySqlParameter("@waterwayId",data[0].getWaterwayId()),
                             new MySqlParameter("@rectangleId",data[0].getRectangleId()),
                         };
@@ -239,88 +188,8 @@ namespace MineralThicknessMS.service
             }
         }
 
-        //以航道号，采矿量，结束时间，开始时间生成DataTable
-        public static System.Data.DataTable mineTable(DateTime dateTimeBegin,DateTime dateTimeEnd)
-        {
-            try
-            {
-                dateTimeBegin = new DateTime(dateTimeBegin.Year, dateTimeBegin.Month, dateTimeBegin.Day);
-
-                dateTimeEnd = new DateTime(dateTimeEnd.Year, dateTimeEnd.Month, dateTimeEnd.Day);
-                dateTimeEnd = dateTimeEnd.AddDays(1);
-                //mproduce表中相同格子有重复不影响
-                string sqlStr1 = "SELECT waterway_id," +
-                    "SUM(CASE WHEN flag = 1 THEN avg_mine_produce ELSE 0 END) + SUM(CASE WHEN flag = 0 THEN avg_mine_reserve ELSE 0 END) AS total_sum," +
-                    "MAX(date_time) AS max_e,MIN(date_time) AS min_e " +
-                    "FROM mproduce WHERE date_time >= @dateTimeBegin AND date_time <= @dateTimeEnd GROUP BY waterway_id";
-                MySqlParameter[] param1 = new MySqlParameter[]
-                {
-                    new MySqlParameter("@dateTimeBegin",dateTimeBegin),
-                    new MySqlParameter("@dateTimeEnd",dateTimeEnd),
-                };
-
-                DataSet dataSet = MySQLHelper.ExecSqlQuery(sqlStr1, param1);
-
-                //将取出的采矿深度和更新为采矿量
-                foreach (DataRow row in dataSet.Tables[0].Rows)
-                {
-                    double originalValue = Convert.ToDouble(row["total_sum"]);
-                    //将矿厚乘底面积
-                    double multipliedValue = originalValue * Status.s;
-                    row["total_sum"] = multipliedValue;
-                }
-
-                return dataSet.Tables[0];
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
-        }
-
-        ////以航道号，采矿量，结束时间，开始时间生成DataTable
-        //public static System.Data.DataTable mineTable()
-        //{
-        //    try
-        //    {
-        //        //3.
-        //        //找出本次开采开始时间
-        //        string sqlStr = "SELECT date_time FROM mproduce WHERE waterway_id=0 and rectangle_id=0 " +
-        //            "ORDER BY date_time DESC LIMIT 1;";
-        //        DataSet ds = MySQLHelper.ExecSqlQuery(sqlStr);
-
-        //        DateTime dt = (DateTime)ds.Tables[0].Rows[0][0];
-
-        //        //mproduce表中相同格子有重复不影响
-        //        string sqlStr1 = "SELECT waterway_id," +
-        //            "SUM(CASE WHEN flag = 1 THEN avg_mine_produce ELSE 0 END) + SUM(CASE WHEN flag = 0 THEN avg_mine_reserve ELSE 0 END) AS total_sum," +
-        //            "MAX(date_time) AS max_e,MIN(date_time) AS min_e " +
-        //            "FROM mproduce WHERE date_time >= @dateTime AND waterway_id > 0 GROUP BY waterway_id";
-        //        MySqlParameter[] param1 = new MySqlParameter[]
-        //        {
-        //        new MySqlParameter("@dateTime",dt),
-        //        };
-
-        //        DataSet dataSet = MySQLHelper.ExecSqlQuery(sqlStr1, param1);
-
-        //        //将取出的采矿深度和更新为采矿量
-        //        foreach (DataRow row in dataSet.Tables[0].Rows)
-        //        {
-        //            double originalValue = Convert.ToDouble(row["total_sum"]);
-        //            //将矿厚乘底面积
-        //            double multipliedValue = originalValue * Status.s;
-        //            row["total_sum"] = multipliedValue;
-        //        }
-
-        //        return dataSet.Tables[0];
-        //    }catch (Exception ex)
-        //    {
-        //        return null;
-        //    }
-        //}
-
-        //输入雷达asc文件路径，提取平面坐标加高程数据
-        public static List<LaterPoint> ReadRadarAsciiFile(string filePath)
+        //输入雷达asc文件路径，提取平面坐标加高程数据,depth判断数据是否有误
+        public static List<LaterPoint> ReadRadarAsciiFile(string filePath,double depth)
         {
             List<LaterPoint> points = new List<LaterPoint>();
 
@@ -336,7 +205,7 @@ namespace MineralThicknessMS.service
 
                         if (fields.Length >= 3)
                         {
-                            if (double.Parse(fields[2]) >= Status.height2)
+                            if (double.Parse(fields[2]) >= depth)
                             {
                                 double x = double.Parse(fields[1]);
                                 double y = double.Parse(fields[0]);
@@ -357,7 +226,44 @@ namespace MineralThicknessMS.service
             return points;
         }
 
-        //将雷达,摩托艇原始数据转换为有效数据，航道-网格-平均高程
+        //输入摩托艇asc文件路径，提取平面坐标加高程数据,depth判断数据是否有误
+        public static List<LaterPoint> ReadMotorAsciiFile(string filePath, double depth)
+        {
+            List<LaterPoint> points = new List<LaterPoint>();
+
+            try
+            {
+                using (StreamReader sr = new StreamReader(filePath))
+                {
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        string[] fields = line.Split(',');
+
+                        if (fields.Length >= 3)
+                        {
+                            if (double.Parse(fields[4]) >= depth)
+                            {
+                                double x = double.Parse(fields[3]);
+                                double y = double.Parse(fields[2]);
+                                double elevation = double.Parse(fields[4]);
+
+                                LaterPoint point = new LaterPoint(x, y, elevation);
+                                points.Add(point);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
+
+            return points;
+        }
+
+        //将雷达/摩托艇原始数据转换为有效数据，航道-网格-平均高程
         public static List<Produce> produceList(List<LaterPoint> points)
         {
             List<List<Grid>> grids = GridView.gridBuild(BoundaryPoints.boundaryPointsList());
@@ -405,6 +311,22 @@ namespace MineralThicknessMS.service
             return produce;
         }
 
+        //将两个集合中航道号和网格编号相同的记录合并，高程取平均值
+        public static List<Produce> MergeAndCalculateAverage(List<Produce> list1, List<Produce> list2)
+        {
+            var mergedList = list1.Concat(list2) // 合并两个集合
+                .GroupBy(p => new { p.Channel, p.Grid }) // 根据 Channel 和 Grid 分组
+                .Select(g => new Produce
+                {
+                    Channel = g.Key.Channel,
+                    Grid = g.Key.Grid,
+                    AverageElevation = g.Average(p => p.AverageElevation) // 计算平均值
+                })
+                .ToList();
+
+            return mergedList;
+        }
+
         //将雷达高程减去底板高度
         public static List<Produce> SubtractX(List<Produce> list, double value)
         {
@@ -419,33 +341,250 @@ namespace MineralThicknessMS.service
             return modifiedList;
         }
 
-        //雷达数据插入数据库
-        public static void radarDataInsert(List<Produce> radarProduce)
+        //事务分配插入，快，准
+        public static void dataInsert(List<Produce> produces)
         {
-            //将时间为今天的记录删除(防止重复导入数据test,mproduce)
-            string sqlStrCleanTest = "delete from test where date_time >= CURDATE()";
-            MySQLHelper.ExecSql(sqlStrCleanTest);
-
-            string sqlStrCleanMproduce = "delete from mproduce where date_time >= CURDATE()";
+            // 将时间为今天的记录删除（防止重复导入数据mproduce）
+            string sqlStrCleanMproduce = "DELETE FROM mproduce WHERE DATE(date_time) = CURDATE()";
             MySQLHelper.ExecSql(sqlStrCleanMproduce);
 
-            //将雷达数据插入数据库
-            string sqlStr = "insert into mproduce(date_time,avg_mine_reserve,waterway_id,rectangle_id,flag,update_time) " +
-                "values(NOW(),@avgMine,@waterWayId,@RectanglewayId,0,NOW())";
-            foreach (Produce radarData in radarProduce)
+            // 将雷达数据插入数据库
+            string sqlStr = "INSERT INTO mproduce (date_time, avg_mine_depth, waterway_id, rectangle_id) VALUES (@dateTime, @avgMine, @waterWayId, @rectangleId)";
+
+            int batchSize = 1000; // 调整批次大小
+            int totalRecords = produces.Count;
+            int batchCount = (int)Math.Ceiling((double)totalRecords / batchSize);
+
+            using (var connection = new MySqlConnection(MySQLHelper.connStr))
             {
-                MySqlParameter[] param = new MySqlParameter[]
+                connection.Open();
+
+                using (var transaction = connection.BeginTransaction())
                 {
-                    new MySqlParameter("@avgMine",radarData.AverageElevation),
-                    new MySqlParameter("@waterWayId",radarData.Channel),
-                    new MySqlParameter("@RectanglewayId",radarData.Grid),
-                };
-                MySQLHelper.ExecSql(sqlStr, param);
+                    try
+                    {
+                        using (var command = new MySqlCommand(sqlStr, connection))
+                        {
+                            command.Parameters.Add("@dateTime", MySqlDbType.DateTime);
+                            command.Parameters.Add("@avgMine", MySqlDbType.Double);
+                            command.Parameters.Add("@waterWayId", MySqlDbType.Int32);
+                            command.Parameters.Add("@rectangleId", MySqlDbType.Int32);
+
+                            for (int batchIndex = 0; batchIndex < batchCount; batchIndex++)
+                            {
+                                int startIndex = batchIndex * batchSize;
+                                int endIndex = Math.Min(startIndex + batchSize, totalRecords);
+
+                                for (int index = startIndex; index < endIndex; index++)
+                                {
+                                    Produce produce = produces[index];
+
+                                    command.Parameters["@dateTime"].Value = DateTime.Now;
+                                    command.Parameters["@avgMine"].Value = produce.AverageElevation;
+                                    command.Parameters["@waterWayId"].Value = produce.Channel;
+                                    command.Parameters["@rectangleId"].Value = produce.Grid;
+
+                                    command.ExecuteNonQuery();
+                                }
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw; // 可根据需要处理事务提交失败的情况
+                    }
+                }
             }
         }
 
-        //模板
-        public static void ExportToExcel(System.Data.DataTable dataTable,DateTime dateTimeBegin,DateTime dateTimeEnd)
+        //根据时间选择最新的数据(航道编号-网格编号-矿厚-xx)
+        public static List<Produce> GetLatestProduceData(DateTime dateTime)
+        {
+            List<Produce> produces = new List<Produce>();
+
+            using (var conn = new MySqlConnection(MySQLHelper.connStr))
+            {
+                conn.Open();
+
+                using (var command = conn.CreateCommand())
+                {
+                    command.CommandText = "SELECT MAX(date_time), avg_mine_depth FROM mproduce " +
+                                            "WHERE date_time < @dateTime AND waterway_id = @waterWayId AND rectangle_id = @rectangleId";
+
+                    for (int waterWayId = 1; waterWayId <= 220; waterWayId++)
+                    {
+                        for (int rectangleId = 1; rectangleId <= 109; rectangleId++)
+                        {
+                            command.Parameters.Clear(); // 清除已定义的参数
+
+                            command.Parameters.AddWithValue("@dateTime", dateTime);
+                            command.Parameters.AddWithValue("@waterWayId", waterWayId);
+                            command.Parameters.AddWithValue("@rectangleId", rectangleId);
+
+                            using (var reader = command.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    object averageElevationObj = reader[1];
+                                    double averageElevation = averageElevationObj is DBNull ? 0 : Convert.ToDouble(averageElevationObj);
+
+                                    object latestTimeObj = reader[0];
+                                    DateTime latestTime = latestTimeObj is DBNull ? dateTime : Convert.ToDateTime(latestTimeObj);
+
+                                    Produce produce = new Produce
+                                    {
+                                        Channel = waterWayId,
+                                        Grid = rectangleId,
+                                        AverageElevation = averageElevation,
+                                        time = latestTime,
+                                    };
+                                    produces.Add(produce);
+                                }
+                                else
+                                {
+                                    Produce produce = new Produce
+                                    {
+                                        Channel = waterWayId,
+                                        Grid = rectangleId,
+                                        AverageElevation = 0,
+                                        time = dateTime,
+                                    };
+                                    produces.Add(produce);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return produces;
+        }
+
+        //使用list2的矿厚减list1的矿厚(航道编号-网格编号-矿厚差-xx)
+        public static List<Produce> MergeAndCalculateDifference(List<Produce> list1, List<Produce> list2)
+        {
+            List<Produce> mergedList = new List<Produce>();
+
+            var produceDict = list2.ToDictionary(p => new { p.Channel, p.Grid });
+
+            foreach (var produce in list1)
+            {
+                var key = new { produce.Channel, produce.Grid };
+                if (produceDict.ContainsKey(key))
+                {
+                    double difference = produceDict[key].AverageElevation - produce.AverageElevation;
+                    Produce mergedProduce = new Produce
+                    {
+                        Channel = produce.Channel,
+                        Grid = produce.Grid,
+                        AverageElevation = difference,
+                        time = produce.time
+                    };
+                    mergedList.Add(mergedProduce);
+                }
+            }
+
+            return mergedList;
+        }
+
+        //将航道号相同的网格的矿厚相加，结果(航道编号-xx-总矿厚-xx)
+        public static List<Produce> AggregateAverageElevation(List<Produce> produces)
+        {
+            List<Produce> aggregatedProduces = new List<Produce>();
+
+            var groupedProduces = produces.GroupBy(p => p.Channel);
+
+            foreach (var group in groupedProduces)
+            {
+                int channel = group.Key;
+                double totalAverageElevation = group.Sum(p => p.AverageElevation);
+
+                Produce aggregatedProduce = new Produce
+                {
+                    Channel = channel,
+                    AverageElevation = totalAverageElevation
+                };
+
+                aggregatedProduces.Add(aggregatedProduce);
+            }
+
+            return aggregatedProduces;
+        }
+
+        //将矿厚转换成体积，结果(航道编号-xx-总体积-xx)
+        public static List<Produce> MultiplyAverageElevation(List<Produce> produces, double area)
+        {
+            List<Produce> multipliedProduces = produces.Select(p => new Produce
+            {
+                Channel = p.Channel,
+                Grid = p.Grid,
+                AverageElevation = p.AverageElevation * area,
+                time = p.time
+            }).ToList();
+
+            return multipliedProduces;
+        }
+
+        //将每条记录AverageElevation求和
+        public static double SumAverageElevation(List<Produce> produces)
+        {
+            double sum = produces.Sum(p => p.AverageElevation);
+            return sum;
+        }
+
+
+        //以航道号，采矿量，
+        public static List<Produce> mineTable(DateTime dateTimeBegin, DateTime dateTimeEnd)
+        {
+            dateTimeBegin = new DateTime(dateTimeBegin.Year,dateTimeBegin.Month,dateTimeBegin.Day,00,00,00);
+            dateTimeEnd = new DateTime(dateTimeEnd.AddDays(1).Year, dateTimeEnd.AddDays(1).Month, dateTimeEnd.AddDays(1).Day,00,00,00);
+
+            List<Produce> producesBegin = new List<Produce>();
+            List<Produce> producesEnd = new List<Produce>();
+
+            //分别找出两个时刻最新的数据
+            producesBegin = GetLatestProduceData(dateTimeBegin);
+            producesEnd = GetLatestProduceData(dateTimeEnd);
+
+            //求出矿厚差(航道编号-网格编号-矿厚差-xx)
+            List<Produce> subProduce = new List<Produce>();
+            subProduce = MergeAndCalculateDifference(producesBegin, producesEnd);
+
+            //将航道号相同的网格的矿厚相加，结果(航道编号-xx-总矿厚差-xx)
+            subProduce = AggregateAverageElevation(subProduce);
+
+            //将矿厚转换成体积，结果(航道编号-xx-总体积-xx)
+            subProduce = MultiplyAverageElevation(subProduce,Status.s);
+
+            return subProduce;
+        }
+
+        //以航道号，采矿量，
+        public static List<Produce> dayMineTable(DateTime dayTime)
+        {
+            dayTime = new DateTime(dayTime.AddDays(1).Year, dayTime.AddDays(1).Month, dayTime.AddDays(1).Day, 00, 00, 00);
+
+            latestData.Clear();
+
+            latestData = GetLatestProduceData(dayTime);
+
+            List<Produce> produce = new List<Produce>();
+
+            //将航道号相同的网格的矿厚相加，结果(航道编号-xx-总矿厚差-xx)
+            produce = AggregateAverageElevation(latestData);
+
+            //将矿厚转换成体积，结果(航道编号-xx-总体积-xx)
+            produce = MultiplyAverageElevation(produce, Status.s);
+
+            return produce;
+
+        }
+
+        //时间段模板
+        public static void ExportToExcel(List<Produce> produces,DateTime dateTimeBegin,DateTime dateTimeEnd,double sum)
         {
            ///获取模板文件的相对路径
             string templateFilePath = @"..\..\..\Resource\template.xlsx";
@@ -474,13 +613,6 @@ namespace MineralThicknessMS.service
                 worksheet.Cells[3, 3].Value = dateTimeBegin.ToShortDateString();
                 worksheet.Cells[3, 6].Value = dateTimeEnd.ToShortDateString();
 
-                double sum = 0;
-                foreach (DataRow row in dataTable.Rows)
-                {
-                    double x = MsgDecode.StrConvertToDou(row[1]);
-                    sum += x;
-                }
-
                 worksheet.Cells[5,6].Value = sum;
 
                 // 从第9行开始写入数据
@@ -490,26 +622,28 @@ namespace MineralThicknessMS.service
                 int sequence = 1;
 
                 // 使用DataTable的数据填充Excel表格
-                for (int row = 0; row < dataTable.Rows.Count; row++)
+                for (int row = 0; row < produces.Count; row++)
                 {
                     // 写入序号
                     worksheet.Cells[startRow + row, 1].Value = sequence++;
 
                     // 写入航道编号
-                    worksheet.Cells[startRow + row, 2].Value = dataTable.Rows[row][0].ToString();
+                    worksheet.Cells[startRow + row, 2].Value = produces[row].Channel.ToString();
 
                     // 写入采矿量
-                    worksheet.Cells[startRow + row, 3].Value = dataTable.Rows[row][1].ToString();
+                    worksheet.Cells[startRow + row, 3].Value = produces[row].AverageElevation.ToString();
 
                     // 写入结束时间
-                    worksheet.Cells[startRow + row, 4].Value = dataTable.Rows[row][2].ToString();
+                    worksheet.Cells[startRow + row, 4].Value = dateTimeBegin.ToShortDateString();
 
                     // 写入开始时间
-                    worksheet.Cells[startRow + row, 5].Value = dataTable.Rows[row][3].ToString();
-                }
+                    worksheet.Cells[startRow + row, 5].Value = dateTimeEnd.ToShortDateString();
 
-                // 获取数据范围
-                ExcelRange dataRange = worksheet.Cells[startRow, 1, startRow + dataTable.Rows.Count - 1, 6];
+                }
+                
+
+            // 获取数据范围
+            ExcelRange dataRange = worksheet.Cells[startRow, 1, startRow + produces.Count - 1, 6];
 
                 // 设置边框样式
                 dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
@@ -532,138 +666,85 @@ namespace MineralThicknessMS.service
             }
         }
 
-        //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        //导出excel有图
-        //public static void ExportToExcel(System.Data.DataTable dataTable)
-        //{
-        //    try
-        //    {
-        //        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        //        using (SaveFileDialog saveFileDialog = new SaveFileDialog())
-        //        {
-        //            saveFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
-        //            saveFileDialog.DefaultExt = "xlsx";
+        //
+        public static void ExportDayMineToExcel(List<Produce> produces,DateTime dateTime,double sum)
+        {
+            ///获取模板文件的相对路径
+            string templateFilePath = @"..\..\..\Resource\dayTemplate.xlsx";
 
-        //            if (saveFileDialog.ShowDialog() == DialogResult.OK)
-        //            {
-        //                string filePath = saveFileDialog.FileName;
+            // 获取模板文件的绝对路径
+            string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string templateFullPath = Path.GetFullPath(Path.Combine(currentDirectory, templateFilePath));
 
-        //                using (ExcelPackage package = new ExcelPackage())
-        //                {
-        //                    ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("Sheet1");
+            // 验证模板文件是否存在
+            if (!File.Exists(templateFullPath))
+            {
+                MessageBox.Show("模板文件不存在！");
+                return;
+            }
+            // 设置EPPlus的LicenseContext为NonCommercial
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            // 加载模板文件
+            FileInfo templateFile = new FileInfo(templateFullPath);
 
-        //                    // 设置列名
-        //                    worksheet.Cells[1, 1].Value = "航道编号";
-        //                    worksheet.Cells[1, 2].Value = "采矿量(m³)";
-        //                    worksheet.Cells[1, 3].Value = "结束时间";
-        //                    worksheet.Cells[1, 4].Value = "开始时间";
+            // 创建新的Excel包
+            using (ExcelPackage excelPackage = new ExcelPackage(templateFile))
+            {
+                // 获取工作表
+                ExcelWorksheet worksheet = excelPackage.Workbook.Worksheets["Sheet1"]; // 根据工作表的名称访问（示例中假设工作表名称为 "Sheet1"）
 
-        //                    double sum = 0;
-        //                    foreach (DataRow row in dataTable.Rows)
-        //                    {
-        //                        double x = MsgDecode.StrConvertToDou(row[1]);
-        //                        sum += x;
-        //                    }
+                worksheet.Cells[3, 4].Value = dateTime.ToShortDateString();
 
-        //                    // 将 DataTable 数据写入工作表
-        //                    for (int row = 0; row < dataTable.Rows.Count; row++)
-        //                    {
-        //                        for (int col = 0; col < dataTable.Columns.Count; col++)
-        //                        {
-        //                            // 检查是否为日期列
-        //                            if (dataTable.Columns[col].DataType == typeof(DateTime))
-        //                            {
-        //                                DateTime dateTimeValue = (DateTime)dataTable.Rows[row][col];
-        //                                worksheet.Cells[row + 2, col + 1].Value = dateTimeValue.ToString("yyyy-MM-dd hh:MM:ss");
-        //                            }
-        //                            else
-        //                            {
-        //                                worksheet.Cells[row + 2, col + 1].Value = dataTable.Rows[row][col];
-        //                            }
-        //                        }
-        //                    }
-        //                    worksheet.Cells[dataTable.Rows.Count + 2, 1].Value = "总量(m³)";
-        //                    worksheet.Cells[dataTable.Rows.Count + 2, 2].Value = sum.ToString();
-        //                    // 添加柱状统计图
-        //                    ExcelChart chart = (ExcelChart)worksheet.Drawings.AddChart("Chart", eChartType.ColumnClustered);
-        //                    chart.SetSize(1500, 750);
-        //                    chart.SetPosition(4, 0, 6, 0);
-        //                    chart.Title.Text = "盐池采矿量分析(航道编号-采矿量)";
-        //                    chart.XAxis.Title.Text = "航道编号";
-        //                    chart.YAxis.Title.Text = "采矿量(单位:m³)";
+                worksheet.Cells[5, 6].Value = sum;
 
-        //                    // 设置统计图的数据范围
-        //                    ExcelRange dataRange = worksheet.Cells[2, 2, dataTable.Rows.Count + 1, 2];
-        //                    ExcelChartSerie series = chart.Series.Add(dataRange, worksheet.Cells[2, 1, dataTable.Rows.Count + 1, 1]);
-        //                    series.Header = worksheet.Cells[1, 2].Value.ToString();
+                // 从第9行开始写入数据
+                int startRow = 9;
 
+                // 设置起始序号
+                int sequence = 1;
 
-        //                    // 保存 Excel 文件
-        //                    FileInfo file = new FileInfo(filePath);
-        //                    package.SaveAs(file);
+                // 使用DataTable的数据填充Excel表格
+                for (int row = 0; row < produces.Count; row++)
+                {
+                    // 写入序号
+                    worksheet.Cells[startRow + row, 1].Value = sequence++;
 
-        //                    MessageBox.Show("文件导出成功！");
-        //                }
-        //            }
-        //        }
-        //    }catch(Exception e)
-        //    {
-        //        MessageBox.Show("文件导出失败！");
-        //    }
-        //}
+                    // 写入航道编号
+                    worksheet.Cells[startRow + row, 2].Value = produces[row].Channel.ToString();
 
-        //无图
-        ////ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        ////导出excel
-        //public static void ExportToExcel(System.Data.DataTable dataTable)
-        //{
-        //    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        //    using (SaveFileDialog saveFileDialog = new SaveFileDialog())
-        //    {
-        //        saveFileDialog.Filter = "Excel Files (*.xlsx)|*.xlsx";
-        //        saveFileDialog.DefaultExt = "xlsx";
+                    // 写入采矿量
+                    worksheet.Cells[startRow + row, 3].Value = produces[row].AverageElevation.ToString();
 
-        //        if (saveFileDialog.ShowDialog() == DialogResult.OK)
-        //        {
-        //            string filePath = saveFileDialog.FileName;
+                    // 写入结束时间
+                    worksheet.Cells[startRow + row, 4].Value = dateTime.ToShortDateString();
 
-        //            using (ExcelPackage package = new ExcelPackage())
-        //            {
-        //                ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("Sheet1");
+                    // 合并第五列和第六列的单元格
+                    worksheet.Cells[startRow + row, 5, startRow + row, 6].Merge = true;
+                }
 
-        //                // 设置列名
-        //                worksheet.Cells[1, 1].Value = "航道编号";
-        //                worksheet.Cells[1, 2].Value = "采矿量";
-        //                worksheet.Cells[1, 3].Value = "结束时间";
-        //                worksheet.Cells[1, 4].Value = "开始时间";
+                // 获取数据范围
+                ExcelRange dataRange = worksheet.Cells[startRow, 1, startRow + produces.Count - 1, 6];
 
-        //                // 将 DataTable 数据写入工作表
-        //                for (int row = 0; row < dataTable.Rows.Count; row++)
-        //                {
-        //                    for (int col = 0; col < dataTable.Columns.Count; col++)
-        //                    {
-        //                        // 检查是否为日期列
-        //                        if (dataTable.Columns[col].DataType == typeof(DateTime))
-        //                        {
-        //                            DateTime dateTimeValue = (DateTime)dataTable.Rows[row][col];
-        //                            worksheet.Cells[row + 2, col + 1].Value = dateTimeValue.ToString("yyyy-MM-dd");
-        //                        }
-        //                        else
-        //                        {
-        //                            worksheet.Cells[row + 2, col + 1].Value = dataTable.Rows[row][col];
-        //                        }
-        //                    }
-        //                }
+                // 设置边框样式
+                dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
 
-        //                // 保存 Excel 文件
-        //                FileInfo file = new FileInfo(filePath);
-        //                package.SaveAs(file);
+                // 自动调整列宽以便更好地显示内容
+                worksheet.Cells.AutoFitColumns();
 
-        //                MessageBox.Show("文件导出成功！");
-        //            }
-        //        }
-        //    }
-        //}
+                // 保存导出的Excel文件
+                SaveFileDialog saveFileDialog = new SaveFileDialog();
+                saveFileDialog.Filter = "Excel 文件|*.xlsx";
+                saveFileDialog.Title = "保存Excel文件";
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    excelPackage.SaveAs(new FileInfo(saveFileDialog.FileName));
+                    MessageBox.Show("Excel文件保存成功！");
+                }
+            }
+        }
     }
     //原始数据提取结构
     public class LaterPoint
@@ -686,5 +767,7 @@ namespace MineralThicknessMS.service
         public int Channel { get; set; }
         public int Grid { get; set; }
         public double AverageElevation { get; set; }
+
+        public DateTime time { get; set; }
     }
 }

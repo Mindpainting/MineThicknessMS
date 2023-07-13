@@ -3,8 +3,15 @@ using MineralThicknessMS.entity;
 
 namespace MineralThicknessMS.service
 {
+    
+
     public class GridView
     {
+        //航道编号
+        public static int channelId = 0;
+        //网格编号
+        public static int gridId = 0;
+
         //给一个盐池的边界点（dms），返回按航道分组的格子
         public static List<List<Grid>> gridBuild(List<PointLatLng> boundaryPoints)
         {
@@ -28,6 +35,8 @@ namespace MineralThicknessMS.service
             double gridSize = 9;
             int XGridCount = (int)(disx / gridSize);
             int YGridCount = (int)(disy / gridSize);
+            channelId = XGridCount;
+            gridId = YGridCount;
 
             double kx = (RightUp.Y - LeftUp.Y) / (RightUp.X - LeftUp.X);//网格x方向斜率
             double ky = (LeftDown.Y - LeftUp.Y) / (LeftDown.X - LeftUp.X);//网格y方向斜率

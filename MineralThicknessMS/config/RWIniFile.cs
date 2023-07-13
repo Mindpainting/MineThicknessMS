@@ -41,20 +41,16 @@ namespace MineralThicknessMS.config
             "",
             "# 测深系数",
             "MeasureCoefficient=2.0"
-                /*            "",
-                            "",
-                            "# Y45盐池四个角点",
-                            "[Y45_BoundaryPoints]",
-                            "LeftUp=40.2810614738,90.4917205106",
-                            "LeftDown=40.2745895561,90.4850289188",
-                            "RightDown=40.2647281553,90.5022922085",
-                            "RightUp=40.2712197832,90.5048896228",
-                            "",
-                            "# Y45盐池底板高度",
-                            "[Y45_FloorHeight]",
-                            "Y45FloorHeight=732.78",
-                            "",
-                            "",*/
+                /* 
+                            "LeftUpLat=40.2810614738",
+                            "LeftUpLng=90.4917205106",
+                            "LeftDownLat=40.2745895561",
+                            "LeftDownLng=90.4850289188",
+                            "RightDownLat=40.2647281553",
+                            "RightDownLng=90.5022922085",
+                            "RightUpLat=40.2712197832",
+                            "RightUpLng=90.5048896228",
+                */
             };
             File.WriteAllLines(filePath, lines);
         }

@@ -13,11 +13,9 @@
     <PackageReference Include="GMap.NET.Core" Version="2.1.7" />
     <PackageReference Include="GMap.NET.WinForms" Version="2.1.7" />
     <PackageReference Include="MySql.Data" Version="8.0.33" />
-    <PackageReference Include="OxyPlot.WindowsForms" Version="2.1.2" />
     <PackageReference Include="STTech.BytesIO.Core" Version="2.12.9" />
     <PackageReference Include="STTech.BytesIO.Tcp" Version="2.12.9" />
     <PackageReference Include="WinForms.DataVisualization" Version="1.8.0" />
-    <PackageReference Include="XPlot.GoogleCharts" Version="3.0.1" />
   </ItemGroup>
 
   <ItemGroup>

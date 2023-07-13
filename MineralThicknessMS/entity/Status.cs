@@ -1,10 +1,14 @@
-﻿using GMap.NET;
-using MineralThicknessMS.service;
+﻿using MineralThicknessMS.service;
 
 namespace MineralThicknessMS.entity
 {
     public class Status
     {
+        //盐池编号
+        public static string saltBoundId = "";
+
+        //测深系数
+        public static double measureCoefficient = 0;
 
         //支架状态 true：展开 false：折叠
         public static bool[] bracket = new bool[2];

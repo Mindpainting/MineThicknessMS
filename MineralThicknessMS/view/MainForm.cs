@@ -8,6 +8,7 @@ using System.Data;
 using MineralThicknessMS.view;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using MineralThicknessMS.config;
 
 namespace MineralThicknessMS
 {
@@ -42,7 +43,7 @@ namespace MineralThicknessMS
             timer2.Start();
             timer2.Tick += new System.EventHandler(time2_Tick);
 
-            GridInMapInit();
+            GridInMapInit();//生成网格
 
             //mapThread1 = new Thread(new ThreadStart(RenderMap1));
             //mapThread1.Start();
@@ -114,13 +115,13 @@ namespace MineralThicknessMS
 
 
             //y31
-            List<PointLatLng> boundaryPoints = new()
+/*            List<PointLatLng> boundaryPoints = new()
                         {
                             new PointLatLng(40.2531571096, 90.4901935097),
                             new PointLatLng(40.2507185251, 90.4834874450),
                             new PointLatLng(40.2425903988, 90.4939599525),
                             new PointLatLng(40.2450507356, 90.5006782956)
-                        };
+                        };*/
 
             /*            correctedPoints.ForEach(point =>
                         {
@@ -128,8 +129,8 @@ namespace MineralThicknessMS
                             overlay.Markers.Add(new AMapMarker(point, 8));
 
                         });*/
-            BoundaryPoints.setBoundaryPoints(boundaryPoints);
-            List<List<Grid>> gridList = GridView.gridBuild(boundaryPoints);
+            //BoundaryPoints.setBoundaryPoints(boundaryPoints);
+            List<List<Grid>> gridList = GridView.gridBuild(BoundaryPoints.boundaryPointsList());
             Status.grids = gridList;
 
             //遍历每一个格子，在地图上绘制

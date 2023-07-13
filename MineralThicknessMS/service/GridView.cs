@@ -264,10 +264,10 @@ namespace MineralThicknessMS.service
     //盐池四个角点类
     public class BoundaryPoints
     {
-        private static PointLatLng LeftUp;   //左上角点 1
-        private static PointLatLng LeftDown; //左下角点 2
-        private static PointLatLng RightDown;//右下角点 3
-        private static PointLatLng RightUp;  //右上角点 4
+        public static PointLatLng LeftUp;   //左上角点 1
+        public static PointLatLng LeftDown; //左下角点 2
+        public static PointLatLng RightDown;//右下角点 3
+        public static PointLatLng RightUp;  //右上角点 4
 
         public static void setBoundaryPoints(List<PointLatLng> points)
         {

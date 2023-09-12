@@ -8,6 +8,11 @@ namespace MineralThicknessMS.entity
 {
     public class Instruction
     {
+        private String SonarPositionSelfCheck = "$SonarPositionSelfCheck\r\n";//水位自检测
+        private String MoveSonarPositionToSelfCheck = "$MoveSonarPositionToSelfCheck\r\n";//测深仪移动至自检位置
+        private String SonarPositionMoveUp = "$SonarPositionMoveUp:\r\n";//向上移动*秒
+        private String SonarPositionMoveDown = "$SonarPositionMoveDown:\r\n";//向下移动*秒
+
         private String BracketLMoveUp = "$BracketLMoveUp\r\n";  //左侧支架向上伸展
         private String BracketLMoveDown = "$BracketLMoveDown\r\n";  //左侧支架向下伸展
         private String BracketLMoveStop = "$BracketLMoveStop\r\n";  //左侧支架关闭
@@ -33,6 +38,26 @@ namespace MineralThicknessMS.entity
         private String StopTankHeatingL = "$StopTankHeatingL\r\n";  //左侧加热关闭
         private String StartTankHeatingR = "$StartTankHeatingR\r\n";    //右侧加热启动
         private String StopTankHeatingR = "$StopTankHeatingR\r\n";//右侧加热关闭
+
+        public String getSonarPositionMoveDown()
+        {
+            return this.SonarPositionMoveDown;
+        }
+
+        public String getSonarPositionMoveUp()
+        {
+            return this.SonarPositionMoveUp;
+        }
+
+        public String getMoveSonarPositionToSelfCheck()
+        {
+            return this.MoveSonarPositionToSelfCheck;
+        }
+
+        public String getSonarPositionSelfCheck()
+        {
+            return this.SonarPositionSelfCheck;
+        }
 
         public String getBracketLMoveUp()
         {

@@ -39,13 +39,24 @@ namespace MineralThicknessMS.service
                 data.setTemperature(StrConvertToDou(strArry[18]));
                 data.setDeviceState(StrConvertToInt(strArry[19]));
                 data.setClientId(StrConvertToInt(strArry[20].Substring(0, 1)));
+
+                data.setMineHigh(data.getHigh() - (data.getDepth())*Status.measureCoefficient - Status.height1 - Status.height2);
+
                 data.setMsgEnd(strArry[20].Substring(1, 3));
 
                 PointLatLng point = new PointLatLng(data.getLatitude(), data.getLongitude());
                 Grid grid = GridView.pointInGrid(Status.grids, point);
-                data.setWaterwayId(grid.Column);
-                data.setRectangleId(grid.Row);
 
+                if(grid.Id == 0)
+                {
+                    data.setWaterwayId(-1);
+                    data.setRectangleId(-1);
+                }
+                else
+                {
+                    data.setWaterwayId(grid.Column);
+                    data.setRectangleId(grid.Row);
+                }
                 return data;
             }
             catch (Exception e)
@@ -57,7 +68,7 @@ namespace MineralThicknessMS.service
 
 
         //string转int
-        public int StrConvertToInt(object o)
+        public static int StrConvertToInt(object o)
         {
             int result = 0;
             if (o != null)

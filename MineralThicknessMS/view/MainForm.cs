@@ -9,153 +9,209 @@ using MineralThicknessMS.view;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using MineralThicknessMS.config;
+using System.Windows.Forms.DataVisualization.Charting;
+using Grid = MineralThicknessMS.service.Grid;
+using Org.BouncyCastle.Asn1;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.IO.Ports;
+using Status = MineralThicknessMS.entity.Status;
 
 namespace MineralThicknessMS
 {
     public partial class MainForm : Form
     {
         private MyServer myserver;
+        private MySerialClient myserialclient;
         private Instruction instruction;
-        private DataMapper dataMapper;
         private MsgDecode msgDecode;
         private GMapOverlay overlay;//GMap图层
         private GMarkerGoogle scjMarker;//水采机标记
         private GMarkerGoogle csyMarker1;//第一个测深仪标记
-        private GMarkerGoogle csyMarker2;//第二个测深仪标记
-        //private Thread mapThread1;//生成网格
-        //private Thread mapThread2;//实时网格填色，标记水采机，测深仪
+        private GMarkerGoogle csyMarker2;//第二个测深仪标记                                  
 
         public MainForm()
         {
             InitializeComponent();
-            myserver = new MyServer(txtPort.Text.ToString());
+            InitializeSerialPortComboBox();
             instruction = new Instruction();
+            myserver = new MyServer();
+            myserialclient = new MySerialClient();
             msgDecode = new MsgDecode();
             overlay = new GMapOverlay();
-            dataMapper = new DataMapper();
-            gMapControl = new GMapControl();
+        }
 
-            timer1.Interval = 10;
-            timer1.Start();
-            timer1.Tick += new System.EventHandler(time1_Tick);
+        private void InitializeSerialPortComboBox()
+        {
+            List<string> availablePortNames = new(SerialPort.GetPortNames());
+            serialPortComboBox.DataSource = availablePortNames;
 
-            timer2.Interval = 3000;
-            timer2.Start();
-            timer2.Tick += new System.EventHandler(time2_Tick);
-
-            GridInMapInit();//生成网格
-
-            //mapThread1 = new Thread(new ThreadStart(RenderMap1));
-            //mapThread1.Start();
-
-            //mapThread2 = new Thread(new ThreadStart(RenderMap2));
-            //mapThread2.Start();
+            if (availablePortNames.Count == 0)
+            {
+                //MessageBox.Show("您的设备未开启任何串口！", "警告");
+            }
+            else
+            {
+                // 加载之前保存的用户选择的串口
+                string LastSelectedSerialPort = Properties.Settings.Default.LastSelectedSerialPort;
+                // 保存的串口不为空
+                if (!string.IsNullOrEmpty(LastSelectedSerialPort))
+                {
+                    if (availablePortNames.Contains(LastSelectedSerialPort))
+                    {
+                        serialPortComboBox.SelectedItem = LastSelectedSerialPort;
+                    }
+                    // 之前保存的串口，当前查出来的串口列表里没有，默认选择串口列表第一个（USB转串口，拔掉串口就没有了）
+                    else
+                    {
+                        serialPortComboBox.SelectedItem = availablePortNames.First();
+                    }
+                }
+            }
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
             GMapInit();//地图初始化
+            GridInMapInit();//生成网格
+
+            //开启定时器1
+            timer1.Interval = 10;
+            timer1.Start();
+            timer1.Tick += new System.EventHandler(time1_Tick);
+
+            //开启定时器2
+            timer2.Interval = 30000;
+            timer2.Start();
+            timer2.Tick += new System.EventHandler(time2_Tick);
+
+            timer3.Interval = 1500;
+            timer3.Start();
+            timer3.Tick += new System.EventHandler(mapRealTimeRender);
+
+            timer4.Interval = 3000;
+            timer4.Start();
+            timer4.Tick += new System.EventHandler(chPositionMTUpdate);
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // 保存用户选择到应用程序配置文件
+            Properties.Settings.Default.LastSelectedSerialPort = serialPortComboBox.SelectedItem?.ToString();
+            Properties.Settings.Default.Save();
+        }
+
+        //更新切割机位置矿厚
+        private async void chPositionMTUpdate(object sender, EventArgs e)
+        {
+            //有经纬度表示GPS有数据传来，只有一个GPS数据不计算
+            if (Status.latitude[0] != 0 && Status.longitude[0] != 0 && Status.latitude[1] != 0 && Status.longitude[1] != 0)
+            {
+                //0表示左后方测深仪(HGPS)，1表示右前方测深仪(QGPS)
+                if (Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1 && Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1)
+                {
+                    //PointLatLng p1 = new(GridView.dmsTodeg(40.273970833427633), GridView.dmsTodeg(90.5005277153964));
+                    //PointLatLng p2 = new(GridView.dmsTodeg(40.273853674353354), GridView.dmsTodeg(90.500396239991787));
+                    //overlay.Markers.Add(new AMapMarker(p1, 12));
+                    //overlay.Markers.Add(new AMapMarker(p2, 12));
+
+                    double[] mt = await myserialclient.GetCHPositionMT();
+                    BeginInvoke(new Action(() => 
+                    {
+                        if (Status.ori[0] < 90 && Status.ori[1] < 90)
+                        {
+                            ToolStripMenuItem8.Text = "北侧矿厚：" + Math.Round(mt[0], 2).ToString("0.00") + "m";
+                            ToolStripMenuItem9.Text = "南侧矿厚：" + Math.Round(mt[1], 2).ToString("0.00") + "m";
+                        }
+                        else
+                        {
+                            ToolStripMenuItem8.Text = "北侧矿厚：" + Math.Round(mt[1], 2).ToString("0.00") + "m";
+                            ToolStripMenuItem9.Text = "南侧矿厚：" + Math.Round(mt[0], 2).ToString("0.00") + "m";
+                        }
+                        ToolStripMenuItem8.ForeColor = Color.Red;
+                        ToolStripMenuItem9.ForeColor = Color.Green;
+                    }));
+                }
+            }
+
         }
 
         // GMap基础信息初始化
-        public void GMapInit()
+        private async void GMapInit()
         {
-            gMapControl.Bearing = 0F;
-            gMapControl.CanDragMap = true;
-            gMapControl.Dock = DockStyle.Fill;
-            gMapControl.EmptyTileColor = Color.Navy;
-            gMapControl.GrayScaleMode = true;
-            gMapControl.HelperLineOption = GMap.NET.WindowsForms.HelperLineOptions.DontShow;
-            gMapControl.LevelsKeepInMemory = 5;
-            gMapControl.Location = new Point(0, 0);
-            gMapControl.Margin = new Padding(4);
-            gMapControl.MarkersEnabled = true;
-            gMapControl.MaxZoom = 2;
-            gMapControl.MinZoom = 2;
-            gMapControl.MouseWheelZoomEnabled = true;
-            gMapControl.MouseWheelZoomType = MouseWheelZoomType.MousePositionAndCenter;
-            gMapControl.Name = "gMapControl";
-            gMapControl.NegativeMode = false;
-            gMapControl.PolygonsEnabled = true;
-            gMapControl.RetryLoadTile = 0;
-            gMapControl.RoutesEnabled = true;
-            gMapControl.ScaleMode = GMap.NET.WindowsForms.ScaleModes.Fractional;
-            gMapControl.SelectedAreaFillColor = Color.FromArgb(33, 65, 105, 225);
-            gMapControl.ShowTileGridLines = false;
-            gMapControl.Size = new Size(1859, 1362);
-            gMapControl.TabIndex = 0;
+            await Task.Run(() =>
+            {
+                gMapControl = new GMapControl();
+                gMapControl.Bearing = 0F;
+                gMapControl.CanDragMap = true;
+                gMapControl.Dock = DockStyle.Fill;
+                gMapControl.EmptyTileColor = Color.Navy;
+                gMapControl.GrayScaleMode = true;
+                gMapControl.HelperLineOption = HelperLineOptions.DontShow;
+                gMapControl.LevelsKeepInMemory = 5;
+                gMapControl.Location = new Point(0, 0);
+                gMapControl.Margin = new Padding(4);
+                gMapControl.MarkersEnabled = true;
+                gMapControl.MouseWheelZoomEnabled = true;
+                gMapControl.MouseWheelZoomType = MouseWheelZoomType.MousePositionAndCenter;
+                gMapControl.Name = "gMapControl";
+                gMapControl.NegativeMode = false;
+                gMapControl.PolygonsEnabled = true;
+                gMapControl.RetryLoadTile = 0;
+                gMapControl.RoutesEnabled = true;
+                gMapControl.ScaleMode = ScaleModes.Fractional;
+                gMapControl.SelectedAreaFillColor = Color.FromArgb(33, 65, 105, 225);
+                gMapControl.ShowTileGridLines = false;
+                gMapControl.Size = new Size(1859, 1362);
+                gMapControl.TabIndex = 0;
+                gMapControl.Zoom = 0D;
+
+                gMapControl.Manager.Mode = AccessMode.ServerAndCache;
+                //缓存位置
+                gMapControl.CacheLocation = Environment.CurrentDirectory + "\\GMapCache\\";
+
+                //gMapControl.MapProvider = AMapProvider.Instance; //高德地图
+                gMapControl.MapProvider = GMapProviders.BingSatelliteMap;
+                gMapControl.MinZoom = 2;  //最小比例
+                gMapControl.MaxZoom = 22; //最大比例
+                gMapControl.Zoom = 13;     //当前比例
+                gMapControl.ShowCenter = false; //不显示中心十字点
+                gMapControl.DragButton = MouseButtons.Left; //左键拖拽地图
+                gMapControl.Position = new PointLatLng(40.42734887689348, 90.79702377319336); //地图中心位置
+            });
             splitContainer1.Panel2.Controls.Add(gMapControl);
-            gMapControl.Zoom = 0D;
-
-            //
-            gMapControl.Manager.Mode = AccessMode.ServerAndCache;
-            gMapControl.CacheLocation = Environment.CurrentDirectory + "\\GMapCache\\"; //缓存位置
-            //gMapControl.MapProvider = AMapProvider.Instance; //高德地图
-            gMapControl.MapProvider = GMapProviders.BingSatelliteMap;
-            gMapControl.MinZoom = 2;  //最小比例
-            gMapControl.MaxZoom = 22; //最大比例
-            gMapControl.Zoom = 13;     //当前比例
-            gMapControl.ShowCenter = false; //不显示中心十字点
-            gMapControl.DragButton = MouseButtons.Left; //左键拖拽地图
-            gMapControl.Position = new PointLatLng(40.42734887689348, 90.79702377319336); //地图中心位置
         }
+
         //生成网格
-        private void GridInMapInit()
+        private async void GridInMapInit()
         {
-            // 调接口获取延迟边界数据，绘制边界线
-
-            // 边界点y45
-            /*            List<PointLatLng> boundaryPoints = new()
-                        {
-                            new PointLatLng(40.2810614738, 90.4917205106),
-                            new PointLatLng(40.2745895561, 90.4850289188),
-                            new PointLatLng(40.2647281553, 90.5022922085),
-                            new PointLatLng(40.2712197832, 90.5048896228),
-                        };*/
-
-
-            //y31
-/*            List<PointLatLng> boundaryPoints = new()
-                        {
-                            new PointLatLng(40.2531571096, 90.4901935097),
-                            new PointLatLng(40.2507185251, 90.4834874450),
-                            new PointLatLng(40.2425903988, 90.4939599525),
-                            new PointLatLng(40.2450507356, 90.5006782956)
-                        };*/
-
-            /*            correctedPoints.ForEach(point =>
-                        {
-                            //AMapMarker自定义地图标记点
-                            overlay.Markers.Add(new AMapMarker(point, 8));
-
-                        });*/
-            //BoundaryPoints.setBoundaryPoints(boundaryPoints);
-            List<List<Grid>> gridList = GridView.gridBuild(BoundaryPoints.boundaryPointsList());
+            List<List<Grid>> gridList = await GridView.gridBuildAsync(BoundaryPoints.boundaryPointsList());
             Status.grids = gridList;
 
-            //遍历每一个格子，在地图上绘制
-            gridList.ForEach(aChannelGrid =>
+            await Task.Run(() =>
             {
-                aChannelGrid.ForEach(aGrid =>
+                //遍历每一个格子，在地图上绘制
+                gridList.ForEach(aChannelGrid =>
                 {
-                    overlay.Polygons.Add(new(aGrid.PointLatLngs, "gridPolygon")
+                    aChannelGrid.ForEach(aGrid =>
                     {
-                        Stroke = new Pen(Color.Yellow, 2)
+                        overlay.Polygons.Add(new(aGrid.PointLatLngs, "gridPolygon")
+                        {
+                            Stroke = new Pen(Color.Yellow, 2)
+                        });
                     });
                 });
+
+                // 创建多边形
+                GMapPolygon polygon = new(BoundaryPoints.getCorrectedPoints(), "polygon")
+                {
+                    // 设置多边形填充颜色
+                    Fill = new SolidBrush(Color.FromArgb(50, Color.ForestGreen)),
+                    // 设置多边形边界颜色和宽度
+                    Stroke = new Pen(Color.Yellow, 3)
+                };
+                overlay.Polygons.Add(polygon);
             });
-
-            // 创建多边形
-            GMapPolygon polygon = new(BoundaryPoints.getCorrectedPoints(), "polygon")
-            {
-                // 设置多边形填充颜色
-                Fill = new SolidBrush(Color.FromArgb(50, Color.ForestGreen)),
-                // 设置多边形边界颜色和宽度
-                Stroke = new Pen(Color.Yellow, 3)
-            };
-            overlay.Polygons.Add(polygon);
-
-            gMapControl.Overlays.Add(overlay);
+            BeginInvoke(new Action(() => { gMapControl.Overlays.Add(overlay); }));
         }
 
         //绘制图例
@@ -209,6 +265,148 @@ namespace MineralThicknessMS
             }
         }
 
+        private async Task<Dictionary<int, GMapPolygon>> getDrawnGrids(double[] amt)
+        {
+            Dictionary<int, GMapPolygon> drawnGrids = new();
+            await Task.Run(() =>
+            {
+                //标记是否找到格子，找到直接终结循环
+                bool[] flag = new bool[2] { false, false };
+                for (int i = 0; i < amt.Length; i++)
+                {
+                    foreach (List<Grid> aChannelGrids in Status.grids)
+                    {
+                        if (flag[i])
+                            break;
+                        foreach (Grid grid in aChannelGrids)
+                        {
+                            //GPS无数据，循环结束
+                            if (Status.latitude[i] == 0 && Status.longitude[i] == 0)
+                                break;
+                            else
+                            {
+                                if (grid.Column == Status.waterwayId[i] && grid.Row == Status.rectangleId[i])
+                                {
+                                    GMapPolygon targetGridPolygon = new(grid.PointLatLngs, "targetGridPolygon");
+                                    if (amt[i] < 0)
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.White));
+                                    }
+                                    else if (amt[i] > 0 && amt[i] <= 0.5)
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Cyan));
+                                    }
+                                    else if (amt[i] > 0.5 && amt[i] <= 1)
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.SkyBlue));
+                                    }
+                                    else if (amt[i] > 1 && amt[i] <= 1.5)
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.PaleGreen));
+                                    }
+                                    else if (amt[i] > 1.5 && amt[i] <= 2)
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Yellow));
+                                    }
+                                    else if (amt[i] > 2 && amt[i] <= 2.5)
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Orange));
+                                    }
+                                    else if (amt[i] > 2.5 && amt[i] <= 3)
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.OrangeRed));
+                                    }
+                                    else
+                                    {
+                                        targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Purple));
+                                    }
+                                    targetGridPolygon.Stroke = new Pen(Color.Yellow, 2);
+                                    drawnGrids.Add(i, targetGridPolygon);
+                                    flag[i] = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            return drawnGrids;
+        }
+
+        private async void mapRealTimeRender(object sender, EventArgs e)
+        {
+            double[] amt = new double[2];
+            BeginInvoke(new Action(async () =>
+            {
+                if (Status.latitude[0] != 0 && Status.longitude[0] != 0)
+                {
+                    if (Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1)
+                    {
+                        amt[0] = Status.mineDepth[0];
+                        if (csyMarker1 != null)
+                        {
+                            overlay.Markers.Remove(csyMarker1);
+                            csyMarker1.Dispose();
+                        }
+                        csyMarker1 = new GMarkerGoogle(new PointLatLng(Status.latitude[0], Status.longitude[0]), GMarkerGoogleType.arrow);
+                        overlay.Markers.Add(csyMarker1);
+                    }
+                }
+
+                if (Status.latitude[1] != 0 && Status.longitude[1] != 0)
+                {
+                    if (Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1)
+                    {
+                        amt[1] = Status.mineDepth[1];
+                        if (csyMarker2 != null && overlay.Markers.Contains(csyMarker2))
+                        {
+                            overlay.Markers.Remove(csyMarker2);
+                            csyMarker2.Dispose();
+                        }
+                        csyMarker2 = new GMarkerGoogle(new PointLatLng(Status.latitude[1], Status.longitude[1]), GMarkerGoogleType.arrow);
+                        overlay.Markers.Add(csyMarker2);
+                    }
+                }
+
+                //标记水采机位置
+                if (Status.latitude[0] != 0 && Status.longitude[0] != 0 && Status.latitude[1] != 0 && Status.longitude[1] != 0 &&
+                    Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1 && Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1 )
+                {
+                    if (scjMarker != null)
+                    {
+                        overlay.Markers.Remove(scjMarker);
+                        scjMarker.Dispose();
+                    }
+                    double avgCenterLat = (Status.latitude[0] + Status.latitude[1]) / 2.0;
+                    double avgCenterLng = (Status.longitude[0] + Status.longitude[1]) / 2.0;
+                    //取两侧测深仪经纬度平均值，求水采机中心位置经纬度
+                    PointLatLng avgCenterLatLng = new(avgCenterLat, avgCenterLng);
+                    scjMarker = new(avgCenterLatLng, GMarkerGoogleType.orange);
+                    overlay.Markers.Add(scjMarker);
+                }
+                Dictionary<int, GMapPolygon> drawGrids = await getDrawnGrids(amt);
+                for (int i = 0; i < drawGrids.Count; ++i)
+                {
+                    if (drawGrids.Count == 1)
+                    {
+                        int key = drawGrids.Keys.First();
+                        if (Status.GPSState[key] == "固定解" && Status.depth[key] >= 0.3)
+                        {
+                            overlay.Polygons.Add(drawGrids[key]);
+                        }
+                    }
+                    else
+                    {
+                        if (Status.GPSState[i] == "固定解" && Status.depth[i] >= 0.3)
+                        {
+                            overlay.Polygons.Add(drawGrids[i]);
+                        }
+                    }
+                }
+            }));
+            //double[] res = await GetCHPositionMT();
+        }
+
         private void time2_Tick(object sender, EventArgs e)
         {
             Task.Run(() =>
@@ -217,208 +415,116 @@ namespace MineralThicknessMS
             });
         }
 
-        private void btnSearch_Click(object sender, EventArgs e)
+        private async void btnSearch_Click(object sender, EventArgs e)
         {
-            DataAnalysis.subMine = DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
+            btnSearch.Enabled = false;
 
-
-            DataAnalysis.totalSubMine = DataAnalysis.SumAverageElevation(DataAnalysis.subMine);
-            labelTotalData.Text = "时间段内本盐池采矿总量为:" + (Math.Round(DataAnalysis.totalSubMine, 2)).ToString() + "m³";
-
-            dataGridView1.Rows.Clear();
-
-            foreach (Produce produce in DataAnalysis.subMine)
+            await Task.Run(() =>
             {
-                DataGridViewRow row = new DataGridViewRow();
-                row.CreateCells(dataGridView1);
+                DataAnalysis.subMine = DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
+                DataAnalysis.totalSubMine = DataAnalysis.SumAverageElevation(DataAnalysis.subMine);
+            });
 
-                // 设置固定值到特定的单元格
-                row.Cells[0].Value = produce.Channel;
-                row.Cells[1].Value = produce.AverageElevation;
+            labelTotalData.BeginInvoke(new Action(() =>
+            {
+                labelTotalData.Text = "时间段内本盐池采矿总量为：" + (Math.Round(DataAnalysis.totalSubMine, 2)).ToString() + "m³";
+            }));
 
-                // 设置 Produce 对象的其他属性值
-                row.Cells[2].Value = dateTimePickerBegin.Value.ToShortDateString();
-                row.Cells[3].Value = dateTimePickerEnd.Value.ToShortDateString();
+            dataGridView1.BeginInvoke(new Action(() =>
+            {
+                dataGridView1.Rows.Clear();
 
-                dataGridView1.Rows.Add(row);
-            }
+                foreach (Produce produce in DataAnalysis.subMine)
+                {
+                    DataGridViewRow row = new DataGridViewRow();
+                    row.CreateCells(dataGridView1);
+
+                    // 设置固定值到特定的单元格
+                    row.Cells[0].Value = produce.Channel;
+                    row.Cells[1].Value = produce.AverageElevation;
+
+                    // 设置 Produce 对象的其他属性值
+                    row.Cells[2].Value = dateTimePickerBegin.Value.ToShortDateString();
+                    row.Cells[3].Value = dateTimePickerEnd.Value.ToShortDateString();
+
+                    dataGridView1.Rows.Add(row);
+                }
+            }));
+
+            btnSearch.Enabled = true;
+            MessageBox.Show("查询完成");
         }
 
-        private void time1_Tick(object sender, EventArgs e)
+        //private void btnSearch_Click(object sender, EventArgs e)
+        //{
+        //    DataAnalysis.subMine = DataAnalysis.mineTable(dateTimePickerBegin.Value, dateTimePickerEnd.Value);
+
+        //    DataAnalysis.totalSubMine = DataAnalysis.SumAverageElevation(DataAnalysis.subMine);
+        //    labelTotalData.Text = "时间段内本盐池采矿总量为:" + (Math.Round(DataAnalysis.totalSubMine, 2)).ToString() + "m³";
+
+        //    dataGridView1.Rows.Clear();
+
+        //    foreach (Produce produce in DataAnalysis.subMine)
+        //    {
+        //        DataGridViewRow row = new DataGridViewRow();
+        //        row.CreateCells(dataGridView1);
+
+        //        // 设置固定值到特定的单元格
+        //        row.Cells[0].Value = produce.Channel;
+        //        row.Cells[1].Value = produce.AverageElevation;
+
+        //        // 设置 Produce 对象的其他属性值
+        //        row.Cells[2].Value = dateTimePickerBegin.Value.ToShortDateString();
+        //        row.Cells[3].Value = dateTimePickerEnd.Value.ToShortDateString();
+
+        //        dataGridView1.Rows.Add(row);
+        //    }
+        //}
+
+        private async void time1_Tick(object sender, EventArgs e)
         {
-            txtIp.Text = myserver.getIp();
-
-            //服务端
-            radioButton16.Checked = myserver.openFlag;
-            radioButton15.Checked = !(myserver.openFlag);
-
-            //水采机2
-            radioButton14.Checked = Status.bracket[1];
-            radioButton13.Checked = !(Status.bracket[1]);
-            radioButton10.Checked = Status.soundMachine[1];
-            radioButton9.Checked = !(Status.soundMachine[1]);
-            label5.Text = "经度：" + Status.longitude[1] + "E";
-            label6.Text = "纬度：" + Status.latitude[1] + "N";
-            label7.Text = "水深：" + Status.depth[1] + "m";
-            label8.Text = "矿厚：" + Status.mineDepth[1] + "m";
-            label11.Text = "GPS定位状态：" + Status.GPSState[1];
-
-            //水采机1
-            radioButton18.Checked = Status.bracket[0];
-            radioButton17.Checked = !(Status.bracket[0]);
-            radioButton22.Checked = Status.soundMachine[0];
-            radioButton21.Checked = !(Status.soundMachine[0]);
-            label15.Text = "经度：" + Status.longitude[0] + "E";
-            label14.Text = "纬度：" + Status.latitude[0] + "N";
-            label13.Text = "水深：" + Status.depth[0] + "m";
-            label12.Text = "矿厚：" + Status.mineDepth[0] + "m";
-            label16.Text = "GPS定位状态：" + Status.GPSState[0];
-
-            //渲染实时采集的数据
-            //查询水采机所在位置两侧格子内所有数据
-            List<DataMsg> list1 = new();
-            List<DataMsg> list2 = new();
-            List<List<DataMsg>> res1 = new();
-            List<List<DataMsg>> res2 = new();
-            //存放每个格子内分出的两组数据的平均矿厚
-            double[] avgMT = new double[2];
-            try
-            {
-                if (Status.waterwayId[0] != 0 && Status.rectangleId[0] != 0)
-                {
-                    if (csyMarker1 != null)
-                    {
-                        overlay.Markers.Remove(csyMarker1);
-                        csyMarker1.Dispose();
-                    }
-                    csyMarker1 = new GMarkerGoogle(new PointLatLng(Status.latitude[0], Status.longitude[0]), GMarkerGoogleType.arrow);
-                    overlay.Markers.Add(csyMarker1);
-                    list1 = dataMapper.getRealtimeRenderData(Status.waterwayId[0], Status.rectangleId[0]);
-                    res1 = KMeansClustering.KMeansCluster(list1, 2, 100);
-                }
-            }
-            catch (Exception ex)
-            {
-                avgMT[0] = Status.mineDepth[0];
-            }
-
-            try
-            {
-                if (Status.waterwayId[1] != 0 && Status.rectangleId[1] != 0)
-                {
-                    if (csyMarker2 != null)
-                    {
-                        overlay.Markers.Remove(csyMarker2);
-                        csyMarker2.Dispose();
-                    }
-                    csyMarker2 = new GMarkerGoogle(new PointLatLng(Status.latitude[1], Status.longitude[1]), GMarkerGoogleType.arrow);
-                    overlay.Markers.Add(csyMarker2);
-                    list2 = dataMapper.getRealtimeRenderData(Status.waterwayId[1], Status.rectangleId[1]);
-                    res2 = KMeansClustering.KMeansCluster(list2, 2, 100);
-                }
-            }
-            catch (Exception ex)
-            {
-                avgMT[1] = Status.mineDepth[1];
-            }
-            //临时存放每个格子平均矿厚
-            double[] tempAvg = new double[2];
-            //计算第一个格子内所有数据的平均矿厚
-            for (int i = 0; i < res1.Count; i++)
-            {
-                double sum = 0.0;
-                foreach (DataMsg item in res1[i])
-                {
-                    sum += item.mineHigh;
-                }
-                tempAvg[i] = sum / res1.Count * 1.0;
-            }
-            if (avgMT[0] == 0)
-            {
-                avgMT[0] = tempAvg[0] < tempAvg[1] ? tempAvg[0] : tempAvg[1];
-            }
-
-            //计算第二个格子内所有数据的平均矿厚
-            for (int i = 0; i < res2.Count; i++)
-            {
-                double sum = 0.0;
-                foreach (DataMsg item in res2[i])
-                {
-                    sum += item.mineHigh;
-                }
-                tempAvg[i] = sum / res2.Count * 1.0;
-            }
-            if (avgMT[1] == 0)
-            {
-                avgMT[1] = tempAvg[0] < tempAvg[1] ? tempAvg[0] : tempAvg[1];
-            }
-
-            //标记当前水采机位置
-            //有两个点的时候才标记水采机位置，一个或没有标记无意义
-            if ((Status.latitude[0] != 0 && Status.latitude[1] != 0) && (Status.longitude[0] != 0 && Status.longitude[1] != 0))
-            {
-                if (scjMarker != null)
-                {
-                    overlay.Markers.Remove(scjMarker);
-                    scjMarker.Dispose();
-                }
-                double avgCenterLat = (Status.latitude[0] + Status.latitude[1]) / 2.0;
-                double avgCenterLng = (Status.longitude[0] + Status.longitude[1]) / 2.0;
-                //取两侧测深仪经纬度平均值，求水采机中心位置经纬度
-                PointLatLng avgCenterLatLng = new(avgCenterLat, avgCenterLng);
-                scjMarker = new(avgCenterLatLng, GMarkerGoogleType.orange);
-                overlay.Markers.Add(scjMarker);
-            }
-
-            //渲染颜色
-            for (int i = 0; i < avgMT.Length; i++)
-            {
-                Status.grids.ForEach(aChannelGrids =>
-                {
-                    aChannelGrids.ForEach(grid =>
-                    {
-                        if (grid.Column == Status.waterwayId[i] && grid.Row == Status.rectangleId[i])
-                        {
-                            GMapPolygon targetGridPolygon = new(grid.PointLatLngs, "targetGridPolygon");
-                            if (avgMT[i] <= 0)
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.White));
-                            }
-                            else if (avgMT[i] > 0 && avgMT[i] <= 0.5)
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Cyan));
-                            }
-                            else if (avgMT[i] > 0.5 && avgMT[i] <= 1)
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.SkyBlue));
-                            }
-                            else if (avgMT[i] > 1 && avgMT[i] <= 1.5)
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.PaleGreen));
-                            }
-                            else if (avgMT[i] > 1.5 && avgMT[i] <= 2)
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Yellow));
-                            }
-                            else if (avgMT[i] > 2 && avgMT[i] <= 2.5)
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Orange));
-                            }
-                            else if (avgMT[i] > 2.5 && avgMT[i] <= 3)
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.OrangeRed));
-                            }
-                            else
-                            {
-                                targetGridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Purple));
-                            }
-                            targetGridPolygon.Stroke = new Pen(Color.Yellow, 2);
-                            overlay.Polygons.Add(targetGridPolygon);
-                        }
-                    });
-                });
-            }
+            // Run the task asynchronously to avoid blocking the UI thread
+            await UpdateUIAsync();
         }
+
+        // Create a separate method to perform the time-consuming updates
+        private async Task UpdateUIAsync()
+        {
+            BeginInvoke(new Action(() =>
+            {
+                txtIp.Text = myserver.getIp();
+                //服务端
+                radioButton16.Checked = myserver.server.IsRunning;
+                radioButton15.Checked = !(myserver.server.IsRunning);
+
+                //串口通信客户端
+                radioButton1.Checked = myserialclient.serialClient.IsConnected;
+                radioButton2.Checked = !(myserialclient.serialClient.IsConnected);
+
+                //水采机2
+                radioButton14.Checked = Status.bracket[1];
+                radioButton13.Checked = !(Status.bracket[1]);
+                radioButton10.Checked = Status.soundMachine[1];
+                radioButton9.Checked = !(Status.soundMachine[1]);
+                label5.Text = "经度：" + GridView.degTodmsToString(Status.longitude[1]) + "E";
+                label6.Text = "纬度：" + GridView.degTodmsToString(Status.latitude[1]) + "N";
+                label7.Text = "水深：" + Math.Round((Status.depth[1]) * Status.measureCoefficient, 2) + "m";
+                label8.Text = "矿厚：" + Math.Round(Status.mineDepth[1], 2) + "m";
+                label11.Text = "GPS定位状态：" + Status.GPSState[1];
+
+                //水采机1
+                radioButton18.Checked = Status.bracket[0];
+                radioButton17.Checked = !(Status.bracket[0]);
+                radioButton22.Checked = Status.soundMachine[0];
+                radioButton21.Checked = !(Status.soundMachine[0]);
+                label15.Text = "经度：" + GridView.degTodmsToString(Status.longitude[0]) + "E";
+                label14.Text = "纬度：" + GridView.degTodmsToString(Status.latitude[0]) + "N";
+                label13.Text = "水深：" + Math.Round((Status.depth[0]) * Status.measureCoefficient, 2) + "m";
+                label12.Text = "矿厚：" + Math.Round(Status.mineDepth[0], 2) + "m";
+                label16.Text = "GPS定位状态：" + Status.GPSState[0];
+            }));
+        }
+
 
         //开始
         private void btnLBup_Click(object sender, EventArgs e)
@@ -520,29 +626,44 @@ namespace MineralThicknessMS
         {
             myserver.Client_OnDataSent(sender, e, instruction.getStopTankHeatingR());
         }
+
+        private void btnSonarPositionSelfCheck_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionSelfCheck());
+        }
+
+        private void btnMoveSonarPositionToSelfCheck_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getMoveSonarPositionToSelfCheck());
+        }
+
+        private void btnSonarPositionMoveUp_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveUp());
+        }
+
+        private void btnSonarPositionMoveDown_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveDown());
+        }
         //结束
 
 
         //开启服务按钮
         private void btnStartService_Click(object sender, EventArgs e)
         {
-            if (MsgDecode.StrConvertToDou(txtHeight1.Text) <= 0 || MsgDecode.StrConvertToDou(txtHeight2.Text) <= 0
-                || txtHeight1.Enabled == true || txtHeight2.Enabled == true
-                )
+            if (myserver.server.IsRunning)
             {
-                MessageBox.Show("请先提交下方的支架高度和盐池底板高度！", "服务开启失败");
+                MessageBox.Show("服务已经开启，若要重新开启请先关闭服务");
+            }
+            else if (MsgDecode.StrConvertToInt(txtPort.Text) == 0)
+            {
+                MessageBox.Show("请输入端口号");
             }
             else
             {
-                if (myserver.openFlag)
-                {
-                    MessageBox.Show("服务已经开启，若要重新开启请先关闭服务");
-                }
-                else
-                {
-                    myserver = new MyServer(txtPort.Text.ToString());
-                    myserver.tsmiStart_Click(sender, e);
-                }
+                myserver = new MyServer(MsgDecode.StrConvertToInt(txtPort.Text));
+                myserver.tsmiStart_Click(sender, e);
             }
         }
         //关闭服务按钮
@@ -581,20 +702,30 @@ namespace MineralThicknessMS
             string str8_2;
             string str9_1;
             string str9_2;
-            if (myserver.openFlag)
+            string strSClient;
+            if (myserver.server.IsRunning)
                 str1_1 = "服务端状态：开启";
             else
                 str1_1 = "服务端状态：关闭";
 
+            if (myserialclient.serialClient.IsConnected)
+            {
+                strSClient = "串口客户端状态：连接";
+            }
+            else
+            {
+                strSClient = "串口客户端状态：关闭";
+            }
+
             if (Status.bracket[0])
-                str2_1 = "支架状态：展开状态";
+                str2_1 = "支架状态：测量状态";
             else
                 str2_1 = "支架状态：折叠状态";
 
             if (Status.soundMachine[0])
-                str4_1 = "测深仪状态：测量状态";
+                str4_1 = "测深仪状态：深水状态";
             else
-                str4_1 = "测深仪状态：冲洗状态";
+                str4_1 = "测深仪状态：浅水状态";
 
             str5_1 = "经度：" + Status.longitude[0].ToString() + "E";
             str6_1 = "纬度：" + Status.latitude[0].ToString() + "N";
@@ -602,20 +733,20 @@ namespace MineralThicknessMS
             str8_1 = "矿厚：" + Status.mineDepth[0].ToString() + "m";
             str9_1 = "GPS定位状态：" + Status.GPSState[0];
 
-            String str1 = str1_1 + "\r\n" + "设备1状态：" + "\r\n" + str2_1 + "\r\n" + str4_1 + "\r\n" + str5_1 + "\r\n" + str6_1
+            String str1 = str1_1 + "\r\n" + strSClient + "\r\n" + "左设备状态：" + "\r\n" + str2_1 + "\r\n" + str4_1 + "\r\n" + str5_1 + "\r\n" + str6_1
                 + "\r\n" + str7_1 + "\r\n" + str8_1 + "\r\n" + str9_1;
 
 
             if (Status.bracket[1])
-                str2_2 = "支架状态：展开状态";
+                str2_2 = "支架状态：测量状态";
             else
                 str2_2 = "支架状态：折叠状态";
 
 
             if (Status.soundMachine[1])
-                str4_2 = "测深仪状态：测量状态";
+                str4_2 = "测深仪状态：深水状态";
             else
-                str4_2 = "测深仪状态：冲洗状态";
+                str4_2 = "测深仪状态：浅水状态";
 
             str5_2 = "经度：" + Status.longitude[1].ToString() + "E";
             str6_2 = "纬度：" + Status.latitude[1].ToString() + "N";
@@ -623,7 +754,7 @@ namespace MineralThicknessMS
             str8_2 = "矿厚：" + Status.mineDepth[1].ToString() + "m";
             str9_2 = "GPS定位状态：" + Status.GPSState[1];
 
-            String str2 = "设备2状态：" + "\r\n" + str2_2 + "\r\n" + str4_2 + "\r\n" + str5_2 + "\r\n" + str6_2
+            String str2 = "右设备状态：" + "\r\n" + str2_2 + "\r\n" + str4_2 + "\r\n" + str5_2 + "\r\n" + str6_2
                 + "\r\n" + str7_2 + "\r\n" + str8_2 + "\r\n" + str9_2;
             MessageBox.Show(str1 + "\r\n" + str2, "实时数据");
         }
@@ -633,28 +764,6 @@ namespace MineralThicknessMS
             MessageBox.Show("数据报表");
         }
 
-        private void btnDataClean_Click(object sender, EventArgs e)
-        {
-            txtHeight1.Text = null;
-            txtHeight2.Text = null;
-            txtHeight1.Enabled = true;
-            txtHeight2.Enabled = true;
-        }
-
-        private void btnDataSub_Click(object sender, EventArgs e)
-        {
-            if (MsgDecode.StrConvertToDou(txtHeight1.Text) <= 0 || MsgDecode.StrConvertToDou(txtHeight2.Text) <= 0)
-            {
-                MessageBox.Show("请先输入支架高度和盐池底板高度！");
-            }
-            else
-            {
-                Status.height1 = MsgDecode.StrConvertToDou(txtHeight1.Text);
-                Status.height2 = MsgDecode.StrConvertToDou(txtHeight2.Text);
-                txtHeight1.Enabled = false;
-                txtHeight2.Enabled = false;
-            }
-        }
 
         private void btn_Excel_Click(object sender, EventArgs e)
         {
@@ -671,9 +780,6 @@ namespace MineralThicknessMS
         //导入雷达数据按钮
         private void btnInputData_Click(object sender, EventArgs e)
         {
-            RadarDataInputForm form = new RadarDataInputForm();
-            form.ShowDialog();
-
             OpenFileDialog openFileDialog = new OpenFileDialog();
             // 设置对话框的标题和过滤器
             openFileDialog.Title = "选择ASC文件";
@@ -700,10 +806,7 @@ namespace MineralThicknessMS
         //导入摩托艇数据
         private void btnInportBoatData_Click(object sender, EventArgs e)
         {
-            RadarDataInputForm form = new RadarDataInputForm();
-            form.ShowDialog();
-
-            if (DataAnalysis.motorProduce.Count != 0)
+            if (DataAnalysis.radarProduce.Count != 0)
             {
                 OpenFileDialog openFileDialog = new OpenFileDialog();
                 // 设置对话框的标题和过滤器
@@ -726,8 +829,6 @@ namespace MineralThicknessMS
 
                     List<Produce> totalProduce = new List<Produce>();
 
-                    int count = DataAnalysis.radarProduce.Count;
-
                     //合并
                     totalProduce = DataAnalysis.MergeAndCalculateAverage(DataAnalysis.radarProduce, DataAnalysis.motorProduce);
 
@@ -747,30 +848,68 @@ namespace MineralThicknessMS
 
         }
 
-        private void searchDayMine_Click(object sender, EventArgs e)
+        private async void searchDayMine_Click(object sender, EventArgs e)
         {
-            DataAnalysis.dayTotalMine = DataAnalysis.dayMineTable(dateDayTimePicker.Value);
-            DataAnalysis.dayMine = DataAnalysis.SumAverageElevation(DataAnalysis.dayTotalMine);
+            searchDayMine.Enabled = false;
 
-            labelDayTotalMine.Text = "此时间盐池矿量储量为:" + (Math.Round(DataAnalysis.dayMine, 2)).ToString() + "m³";
-
-            dataGridView2.Rows.Clear();
-
-            foreach (Produce produce in DataAnalysis.dayTotalMine)
+            await Task.Run(() =>
             {
-                DataGridViewRow row = new DataGridViewRow();
-                row.CreateCells(dataGridView2);
+                DataAnalysis.dayTotalMine = DataAnalysis.dayMineTable(dateDayTimePicker.Value);
+                DataAnalysis.dayMine = DataAnalysis.SumAverageElevation(DataAnalysis.dayTotalMine);
+            });
 
-                // 设置固定值到特定的单元格
-                row.Cells[0].Value = produce.Channel;
-                row.Cells[1].Value = produce.AverageElevation;
+            // 使用 BeginInvoke 在 UI 线程上更新 labelDayTotalMine 的文本
+            labelDayTotalMine.BeginInvoke(new Action(() =>
+            {
+                labelDayTotalMine.Text = "此时间盐池矿量储量为:" + (Math.Round(DataAnalysis.dayMine, 2)).ToString() + "m³";
+            }));
 
-                // 设置 Produce 对象的其他属性值
-                row.Cells[2].Value = dateDayTimePicker.Value.ToShortDateString();
+            dataGridView2.BeginInvoke(new Action(() =>
+            {
+                dataGridView2.Rows.Clear();
+                foreach (Produce produce in DataAnalysis.dayTotalMine)
+                {
+                    DataGridViewRow row = new DataGridViewRow();
+                    row.CreateCells(dataGridView2);
 
-                dataGridView2.Rows.Add(row);
-            }
+                    row.Cells[0].Value = produce.Channel;
+                    row.Cells[1].Value = produce.AverageElevation;
+
+                    row.Cells[2].Value = dateDayTimePicker.Value.ToShortDateString();
+
+                    dataGridView2.Rows.Add(row);
+                }
+            }));
+
+            searchDayMine.Enabled = true;
+            MessageBox.Show("查询完成");
         }
+
+
+        //private void searchDayMine_Click(object sender, EventArgs e)
+        //{
+        //    DataAnalysis.dayTotalMine = DataAnalysis.dayMineTable(dateDayTimePicker.Value);
+        //    DataAnalysis.dayMine = DataAnalysis.SumAverageElevation(DataAnalysis.dayTotalMine);
+
+        //    labelDayTotalMine.Text = "此时间盐池矿量储量为:" + (Math.Round(DataAnalysis.dayMine, 2)).ToString() + "m³";
+
+        //    dataGridView2.Rows.Clear();
+
+        //    foreach (Produce produce in DataAnalysis.dayTotalMine)
+        //    {
+        //        DataGridViewRow row = new DataGridViewRow();
+        //        row.CreateCells(dataGridView2);
+
+        //        // 设置固定值到特定的单元格
+        //        row.Cells[0].Value = produce.Channel;
+        //        row.Cells[1].Value = produce.AverageElevation;
+
+        //        // 设置 Produce 对象的其他属性值
+        //        row.Cells[2].Value = dateDayTimePicker.Value.ToShortDateString();
+
+        //        dataGridView2.Rows.Add(row);
+        //    }
+        //}
 
         private void btnExportDayExcel_Click(object sender, EventArgs e)
         {
@@ -784,6 +923,7 @@ namespace MineralThicknessMS
             }
         }
 
+        //导出每个网格平面坐标加高程数据
         private void btn3DData_Click(object sender, EventArgs e)
         {
             if (dataGridView2.Rows.Count == 1)
@@ -808,9 +948,59 @@ namespace MineralThicknessMS
                         produces.ForEach(produce =>
                         {
                             PointXY centerXY = GridView.getCenterXY(produce.Channel, produce.Grid);
-                            string line = $"{centerXY.X},{centerXY.Y},777.666";
+                            string line = $"{centerXY.X},{centerXY.Y},{Status.height2 + produce.AverageElevation}";
                             lines.Add(line);
                         });
+
+                        using (StreamWriter writer = new(filePath, true))
+                        {
+                            foreach (string line in lines)
+                            {
+                                writer.WriteLine(line);
+                            }
+                        }
+                        MessageBox.Show("数据导出成功！", "提示");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("数据导出失败：" + ex.Message, "错误");
+                    }
+                }
+            }
+        }
+
+        //导出每个网格平面直角坐标系相对于第一个格子(4.5, 4.5)的位置加矿厚数据
+        private void btnXYData_Click(object sender, EventArgs e)
+        {
+            if (dataGridView2.Rows.Count == 1)
+            {
+                MessageBox.Show("请先查询报表!");
+            }
+            else
+            {
+                SaveFileDialog saveFileDialog = new()
+                {
+                    Filter = "文本文件|*.txt|所有文件|*.*", // 可以根据需求设置过滤器
+                    Title = "选择导出文件的保存位置"
+                };
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = saveFileDialog.FileName;
+                    try
+                    {
+                        List<string> lines = new();
+                        List<Produce> produces = DataAnalysis.latestData;
+
+                        int k = 0;
+                        for (int i = 0; i < GridView.channelId; i++)
+                        {
+                            for (int j = 0; j < GridView.gridId; j++)
+                            {
+                                string line = $"{4.5 + 9 * i},{4.5 + 9 * j},{produces[k++].AverageElevation}";
+                                lines.Add(line);
+                            }
+                        }
 
                         using (StreamWriter writer = new(filePath, true))
                         {
@@ -838,7 +1028,8 @@ namespace MineralThicknessMS
             }
             else
             {
-                ChartForm chartForm = new(DataAnalysis.dayTotalMine);
+                ChartForm chartForm = new(DataAnalysis.dayTotalMine, dateDayTimePicker.Value.ToShortDateString()
+                    + " " + Status.saltBoundId + "盐池矿量储量分析");
                 chartForm.ShowDialog();
             }
         }
@@ -852,9 +1043,187 @@ namespace MineralThicknessMS
             }
             else
             {
-                ChartForm chartForm = new(DataAnalysis.subMine);
+                ChartForm chartForm = new(DataAnalysis.subMine,
+                    dateTimePickerBegin.Value.ToShortDateString() + "-" + dateTimePickerEnd.Value.ToShortDateString() + " " +
+                    Status.saltBoundId + "盐池采矿量分析");
                 chartForm.ShowDialog();
             }
+        }
+
+        /*        private async void GetCHPositionMTTimer(object sender, EventArgs e)
+                {
+                    double[] mt = await GetCHPositionMT();
+                }*/
+
+        //计算水采机前后切割机位置，返回切割机所在位置矿厚
+        /*        private async Task<double[]> GetCHPositionMT()
+                {
+                    double[] result = new double[2] { -999, -999 };
+                    //0表示左后方测深仪(HGPS)，1表示右前方测深仪(QGPS)
+                    if ((Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1) && (Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1))
+                    {
+                        //左后GPS
+                        PointLatLng gpsLA = new(GridView.degTodms(Status.latitude[0]), GridView.degTodms(Status.longitude[0]));
+                        //右前GPS
+                        PointLatLng gpsRB = new(GridView.degTodms(Status.latitude[1]), GridView.degTodms(Status.longitude[1]));
+
+                        GpsXY.GetValueOfCoordSys();
+                        GpsXY.GaussBL_XY(GpsXY.m_Cs84, gpsLA.Lat, gpsLA.Lng, out double X1, out double Y1);
+                        GpsXY.GaussBL_XY(GpsXY.m_Cs84, gpsRB.Lat, gpsRB.Lng, out double X2, out double Y2);
+
+                        //平面坐标
+                        PointXY pointXY1 = new(X1, Y1);
+                        PointXY pointXY2 = new(X2, Y2);
+
+                        //高程
+                        double elevation1 = Status.height2;
+                        double elevation2 = Status.height2;
+
+                        GPSCoor gpsCoorLA = new(gpsLA.Lat, gpsLA.Lng, pointXY1.X, pointXY1.Y, elevation1);
+                        GPSCoor gpsCoorRB = new(gpsRB.Lat, gpsRB.Lng, pointXY2.X, pointXY2.Y, elevation2);
+                        GPSCoord.IniCoordSysTag();
+
+                        List<Grid> list = new();
+                        //HGPS横滚小于等于30使用HGPS计算前后切割机位置
+                        if (Status.rolling[0] <= 30)
+                        {
+                            double oriLA = Status.ori[0];
+                            //计算垂足
+                            GPSCoor footDownPoint = new();
+                            GPSCoord.CalPnt(gpsCoorLA, oriLA + 90, Status.GPSToCenterAxisDis, footDownPoint);
+
+                            //切割机位置D
+                            GPSCoor calPointDBefore = new();
+                            GPSCoor calPointDAfter = new();
+                            //
+                            GPSCoord.CalPnt(footDownPoint, oriLA, Status.HDisToCH[0], calPointDBefore);
+                            GPSCoord.CalPnt(footDownPoint, oriLA + 180, Status.HDisToCH[1], calPointDAfter);
+                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDBefore.LocN, calPointDBefore.LocE, out double B1, out double L1);
+                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDAfter.LocN, calPointDAfter.LocE, out double B2, out double L2);
+                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B1, L1)));
+                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B2, L2)));
+
+                            PointLatLng p1 = new(GridView.dmsTodeg(B1), GridView.dmsTodeg(L1));
+                            PointLatLng p2 = new(GridView.dmsTodeg(B2), GridView.dmsTodeg(L2));
+                            overlay.Markers.Add(new AMapMarker(p1, 12));
+                            overlay.Markers.Add(new AMapMarker(p2, 12));
+                        }
+                        else
+                        {
+                            double oriRB = Status.ori[1];
+
+                            //计算垂足
+                            GPSCoor footDownPoint = new();
+                            GPSCoord.CalPnt(gpsCoorRB, oriRB - 90, Status.GPSToCenterAxisDis, footDownPoint);
+
+                            //切割机位置D
+                            GPSCoor calPointDBefore = new();
+                            GPSCoor calPointDAfter = new();
+                            //
+                            GPSCoord.CalPnt(footDownPoint, oriRB, Status.HDisToCH[0], calPointDBefore);
+                            GPSCoord.CalPnt(footDownPoint, oriRB + 180, Status.HDisToCH[1], calPointDAfter);
+                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDBefore.LocN, calPointDBefore.LocE, out double B1, out double L1);
+                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDAfter.LocN, calPointDAfter.LocE, out double B2, out double L2);
+                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B1, L1)));
+                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B2, L2)));
+
+                            PointLatLng p1 = new(GridView.dmsTodeg(B1), GridView.dmsTodeg(L1));
+                            PointLatLng p2 = new(GridView.dmsTodeg(B2), GridView.dmsTodeg(L2));
+                            overlay.Markers.Add(new AMapMarker(p1, 12));
+                            overlay.Markers.Add(new AMapMarker(p2, 12));
+                        }
+
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            if (list[i].Id != 0)
+                            {
+                                //查数据库，查该格子矿厚
+                                result[i] = await DataMapper.getGridMineThickness(list[i].Column, list[i].Row);
+                            }
+                        }
+                    }
+                    return result;
+                }*/
+
+        private void ToolStripMenuItem7_Click(object sender, EventArgs e)
+        {
+            string regFullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "reg.ini");
+
+            //文件中的激活码
+            string regStr = ReadRegFile.regCode(regFullPath);
+
+            DateTime endTime = SoftRegHelper.DecryptTimestamp(regStr.Substring(24));
+
+            MessageBox.Show("订阅截至时间为：" + endTime.ToString(), "订阅信息");
+        }
+
+        private void btnConnectSerial_Click(object sender, EventArgs e)
+        {
+            if (myserialclient.serialClient.IsConnected)
+            {
+                MessageBox.Show("已连接串口，若要重连请先断开", "提示");
+            }
+            else
+            {
+                if (serialPortComboBox.Items.Count > 0)
+                {
+                    myserialclient = new MySerialClient(serialPortComboBox.SelectedItem.ToString());
+                    myserialclient.serialConnect(sender, e);
+                }
+                else
+                {
+                    MessageBox.Show("您的设备没有可用的串口，请先开启串口！", "提示");
+                }
+            }
+        }
+
+        private void btnDisConnectSerial_Click(object sender, EventArgs e)
+        {
+            if (serialPortComboBox.Items.Count > 0)
+            {
+                MessageBox.Show("确定要断开串口？", "提示");
+                myserialclient.serialDisconnect(sender, e);
+            }
+            else
+            {
+                MessageBox.Show("当前未连接串口！", "提示");
+            }
+        }
+
+        private void btnInportOuterData_Click(object sender, EventArgs e)
+        {
+            btnInportOuterData.Enabled = false;
+
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            // 设置对话框的标题和过滤器
+            openFileDialog.Title = "选择DAT文件";
+            openFileDialog.Filter = "DAT文件|*dat";
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string filePath = openFileDialog.FileName;
+
+                List<LaterPoint> points = new List<LaterPoint>();
+
+                // 调用处理文件的方法，传入选定的文件路径
+                //读出原始数据
+                points = DataAnalysis.ReadOuterAsciiFile(filePath, Status.height2);
+
+                List<Produce> outerDataProduce = new List<Produce>();
+                //将原始数据转换成 航道号-网格编号-平均高程
+                outerDataProduce = DataAnalysis.produceList(points);
+
+
+                //将平均高程减去盐池底板高度，得到平均矿厚 航道号-网格号-平均矿厚
+                outerDataProduce = DataAnalysis.SubtractX(outerDataProduce, Status.height2);
+
+                //将记录插入数据库
+                DataAnalysis.dataInsert(outerDataProduce);
+
+                MessageBox.Show("外部数据读取完成");
+            }
+
+            btnInportOuterData.Enabled = true;
         }
     }
 }

@@ -7,17 +7,20 @@ namespace MineralThicknessMS.view
 {
     public partial class ChartForm : Form
     {
-        public ChartForm(List<Produce> produces)
+        private string chartTitle;
+
+        public ChartForm(List<Produce> produces,string title)
         {
             InitializeComponent();
-            ChartInit(produces);
+            this.chartTitle = title;
+            ChartInit(produces, chartTitle);
             btn_saveAsImage.BringToFront();
         }
 
-        public void ChartInit(List<Produce> produces)
+        public void ChartInit(List<Produce> produces,string chartTitle)
         {
             //标题
-            chart1.Titles.Add("盐池采矿量分析");
+            chart1.Titles.Add(chartTitle);
             chart1.Titles[0].Font = new Font("微软雅黑", 16, FontStyle.Bold);
             chart1.Titles[0].Alignment = ContentAlignment.MiddleCenter;
             //副标题
@@ -42,13 +45,13 @@ namespace MineralThicknessMS.view
             chart1.ChartAreas[0].AxisX.TitleFont = new Font("微软雅黑", 12);
             chart1.ChartAreas[0].AxisX.TitleForeColor = Color.Black;
             //设置刻度值和间隔
-            chart1.ChartAreas[0].AxisX.Minimum = 0;
-            chart1.ChartAreas[0].AxisX.Maximum = 221;
+            chart1.ChartAreas[0].AxisX.Minimum = -1;
+            chart1.ChartAreas[0].AxisX.Maximum = GridView.channelId + 1;
             chart1.ChartAreas[0].AxisX.Interval = 5; // 设置 X 轴间隔
             //chart1.ChartAreas[0].AxisX.MinorTickMark.Interval = 0.2; // 设置次刻度线的间隔
             //设置刻度倾斜角度
             chart1.ChartAreas[0].AxisX.LabelStyle.Angle = -45;
-            chart1.ChartAreas[0].AxisX.IntervalOffset = -1; // 设置刻度间隔偏移
+            chart1.ChartAreas[0].AxisX.IntervalOffset = 1; // 设置刻度间隔偏移
             //解决倾斜后字体变换
             chart1.ChartAreas[0].AxisX.LabelStyle.Font = new Font("微软雅黑", 8);
 
@@ -97,6 +100,7 @@ namespace MineralThicknessMS.view
 
                 // 导出为图片
                 chart1.SaveImage(filePath, ChartImageFormat.Png);
+                MessageBox.Show("图片保存成功！", "提示");
             }
         }
 
@@ -105,7 +109,6 @@ namespace MineralThicknessMS.view
             try
             {
                 SaveAsImage();
-                MessageBox.Show("图片保存成功！", "提示");
             }
             catch (Exception ex)
             {

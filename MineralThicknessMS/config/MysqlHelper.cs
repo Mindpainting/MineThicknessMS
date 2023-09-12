@@ -13,7 +13,6 @@ namespace MineralThicknessMS.config
     {
         public static string connStr = "Database=luojiadata;Data Source=localhost;User Id=root;Password=root;pooling=false;CharSet=utf8;port=3306";
 
-
         public static void ExecSql(string sqlStr, MySqlParameter[] parameters, MySqlTransaction transaction = null)
         {
             using (var connection = new MySqlConnection(connStr))

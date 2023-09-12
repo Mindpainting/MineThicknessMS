@@ -43,6 +43,21 @@ namespace MineralThicknessMS.entity
         //GPS定位状态
         public static string[] GPSState = new string[2];
 
+        //两GPS至船中轴线距离
+        public static double GPSToCenterAxisDis;
+       
+        //GPS惯导航向
+        public static double[] ori = new double[2];
+
+        //惯导横滚
+        public static double[] rolling = new double[2];  
+
+        //QGPS(右前方测深仪) 中轴线点至前，后切割机距离
+        public static double[] QDisToCH = new double[2];
+
+        //HGPS(左后方测深仪) 中轴线点至前，后切割机距离
+        public static double[] HDisToCH = new double[2];
+
         //每一个小网格集合，按航道分组
         public static List<List<Grid>> grids = new();
 
@@ -84,7 +99,9 @@ namespace MineralThicknessMS.entity
                 waterwayId[clientId] = dataMsg.getWaterwayId();
                 rectangleId[clientId] = dataMsg.getRectangleId();
                 depth[clientId] = dataMsg.getDepth();
-                mineDepth[clientId] = toPointN(dataMsg.getHigh() - height1 - dataMsg.getDepth() - height2,2);
+                mineDepth[clientId] = Math.Round(dataMsg.getHigh() - height1 - (dataMsg.getDepth())*measureCoefficient - height2,2);
+                ori[clientId] = dataMsg.getNavigation();
+                rolling[clientId] = dataMsg.getRolling();
                 switch (dataMsg.getGpsState())
                 {
                     case 0:
@@ -120,16 +137,8 @@ namespace MineralThicknessMS.entity
                 }
             }catch  (Exception e)
             {
-
             }
         }
-        
-        //保留double小数点后n位
-        public double toPointN(double num,int n)
-        {
-            return Math.Round(num, n);
-        }
-
         
     }
 }

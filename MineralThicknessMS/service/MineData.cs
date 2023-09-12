@@ -110,8 +110,6 @@ namespace MineralThicknessMS.service
                         avgAdd = data[0].getMineHigh();
                     }
 
-
-
                     //在mproduce表中查看今天有无该网格信息
                     string sqlStrIsToday = "SELECT count(*) from mproduce WHERE waterway_id = @waterwayId and rectangle_id = @rectangleId and " +
                         "DATE(date_time) = CURDATE()";
@@ -142,7 +140,7 @@ namespace MineralThicknessMS.service
                     else if (sum > 0 && avgSub >= 0.3)
                     {
                         string sqlStrUpdateProduceToday = "update mproduce set avg_mine_depth = @avgMineDepth " +
-                            "where waterway_id = @waterwayId and rectangle_id = @rectangleId";
+                            "where waterway_id = @waterwayId and rectangle_id = @rectangleId and Date(date_time)=CURDATE()";
                         MySqlParameter[] paramUpdateProduceToday = new MySqlParameter[]
                         {
                             new MySqlParameter("@avgMineDepth",avgMinGroup),
@@ -169,7 +167,7 @@ namespace MineralThicknessMS.service
                     else if (sum > 0 && avgSub < 0.3)
                     {
                         string sqlStrUpdateToday = "update mproduce set avg_mine_depth = @avgMineDepth " +
-                        "where waterway_id = @waterwayId and rectangle_id = @rectangleId";
+                        "where waterway_id = @waterwayId and rectangle_id = @rectangleId and Date(date_time)=CURDATE()";
                         MySqlParameter[] paramUpdateToday = new MySqlParameter[]
                         {
                             new MySqlParameter("@avgMineDepth",avgAdd),
@@ -209,6 +207,43 @@ namespace MineralThicknessMS.service
                                 double x = double.Parse(fields[1]);
                                 double y = double.Parse(fields[0]);
                                 double elevation = double.Parse(fields[2]);
+
+                                LaterPoint point = new LaterPoint(x, y, elevation);
+                                points.Add(point);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
+
+            return points;
+        }
+
+        //输入外部asc文件路径，提取平面坐标加高程数据,depth判断数据是否有误
+        public static List<LaterPoint> ReadOuterAsciiFile(string filePath, double depth)
+        {
+            List<LaterPoint> points = new List<LaterPoint>();
+
+            try
+            {
+                using (StreamReader sr = new StreamReader(filePath))
+                {
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        string[] fields = line.Split(',');
+
+                        if (fields.Length >= 3)
+                        {
+                            if (double.Parse(fields[4]) >= depth)
+                            {
+                                double x = double.Parse(fields[3]);
+                                double y = double.Parse(fields[2]);
+                                double elevation = double.Parse(fields[4]);
 
                                 LaterPoint point = new LaterPoint(x, y, elevation);
                                 points.Add(point);
@@ -277,13 +312,15 @@ namespace MineralThicknessMS.service
                 PointLatLng latlng = GridView.pointXYToBL(xy);
                 grid1 = GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), grids, latlng);
 
-                int channel = grid1.Column;
-                int grid = grid1.Row;
 
                 if (grid1.Id == 0)
                 {
                     continue;
                 }
+
+                int channel = grid1.Column;
+                int grid = grid1.Row;
+
 
                 if (!averages.ContainsKey((channel, grid)))
                 {
@@ -378,7 +415,7 @@ namespace MineralThicknessMS.service
                                 {
                                     Produce produce = produces[index];
 
-                                    command.Parameters["@dateTime"].Value = DateTime.Now;
+                                    command.Parameters["@dateTime"].Value = DateTime.Now.AddDays(-1);
                                     command.Parameters["@avgMine"].Value = produce.AverageElevation;
                                     command.Parameters["@waterWayId"].Value = produce.Channel;
                                     command.Parameters["@rectangleId"].Value = produce.Grid;
@@ -410,12 +447,12 @@ namespace MineralThicknessMS.service
 
                 using (var command = conn.CreateCommand())
                 {
-                    command.CommandText = "SELECT MAX(date_time), avg_mine_depth FROM mproduce " +
-                                            "WHERE date_time < @dateTime AND waterway_id = @waterWayId AND rectangle_id = @rectangleId";
+                    command.CommandText = "SELECT date_time, avg_mine_depth FROM mproduce WHERE date_time < @dateTime " +
+                        "AND waterway_id = @waterWayId AND rectangle_id = @rectangleId ORDER BY date_time desc LIMIT 1";
 
-                    for (int waterWayId = 1; waterWayId <= 220; waterWayId++)
+                    for (int waterWayId = 0; waterWayId < GridView.channelId; waterWayId++)
                     {
-                        for (int rectangleId = 1; rectangleId <= 109; rectangleId++)
+                        for (int rectangleId = 0; rectangleId < GridView.gridId; rectangleId++)
                         {
                             command.Parameters.Clear(); // 清除已定义的参数
 
@@ -550,7 +587,7 @@ namespace MineralThicknessMS.service
 
             //求出矿厚差(航道编号-网格编号-矿厚差-xx)
             List<Produce> subProduce = new List<Produce>();
-            subProduce = MergeAndCalculateDifference(producesBegin, producesEnd);
+            subProduce = MergeAndCalculateDifference(producesEnd, producesBegin);
 
             //将航道号相同的网格的矿厚相加，结果(航道编号-xx-总矿厚差-xx)
             subProduce = AggregateAverageElevation(subProduce);
@@ -585,12 +622,14 @@ namespace MineralThicknessMS.service
         //时间段模板
         public static void ExportToExcel(List<Produce> produces,DateTime dateTimeBegin,DateTime dateTimeEnd,double sum)
         {
-           ///获取模板文件的相对路径
-            string templateFilePath = @"..\..\..\Resource\template.xlsx";
+           /////获取模板文件的相对路径
+           // string templateFilePath = @"..\..\..\Resource\template.xlsx";
 
-            // 获取模板文件的绝对路径
-            string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string templateFullPath = Path.GetFullPath(Path.Combine(currentDirectory, templateFilePath));
+            // // 获取模板文件的绝对路径
+            // string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            // string templateFullPath = Path.GetFullPath(Path.Combine(currentDirectory, templateFilePath));
+
+            string templateFullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "template.xlsx");
 
             // 验证模板文件是否存在
             if (!File.Exists(templateFullPath))
@@ -611,7 +650,7 @@ namespace MineralThicknessMS.service
 
                 worksheet.Cells[3, 3].Value = dateTimeBegin.ToShortDateString();
                 worksheet.Cells[3, 6].Value = dateTimeEnd.ToShortDateString();
-
+                worksheet.Cells[5, 4].Value = Status.saltBoundId;
                 worksheet.Cells[5,6].Value = sum;
 
                 // 从第9行开始写入数据
@@ -641,8 +680,8 @@ namespace MineralThicknessMS.service
                 }
                 
 
-            // 获取数据范围
-            ExcelRange dataRange = worksheet.Cells[startRow, 1, startRow + produces.Count - 1, 6];
+                // 获取数据范围
+                ExcelRange dataRange = worksheet.Cells[startRow, 1, startRow + produces.Count - 1, 6];
 
                 // 设置边框样式
                 dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
@@ -665,15 +704,17 @@ namespace MineralThicknessMS.service
             }
         }
 
-        //
+        //时间模板
         public static void ExportDayMineToExcel(List<Produce> produces,DateTime dateTime,double sum)
         {
-            ///获取模板文件的相对路径
-            string templateFilePath = @"..\..\..\Resource\dayTemplate.xlsx";
+            /////获取模板文件的相对路径
+            //string templateFilePath = @"..\..\..\Resource\dayTemplate.xlsx";
 
-            // 获取模板文件的绝对路径
-            string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string templateFullPath = Path.GetFullPath(Path.Combine(currentDirectory, templateFilePath));
+            //// 获取模板文件的绝对路径
+            //string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            //string templateFullPath = Path.GetFullPath(Path.Combine(currentDirectory, templateFilePath));
+
+            string templateFullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dayTemplate.xlsx");
 
             // 验证模板文件是否存在
             if (!File.Exists(templateFullPath))
@@ -693,6 +734,8 @@ namespace MineralThicknessMS.service
                 ExcelWorksheet worksheet = excelPackage.Workbook.Worksheets["Sheet1"]; // 根据工作表的名称访问（示例中假设工作表名称为 "Sheet1"）
 
                 worksheet.Cells[3, 4].Value = dateTime.ToShortDateString();
+
+                worksheet.Cells[5, 4].Value = Status.saltBoundId;
 
                 worksheet.Cells[5, 6].Value = sum;
 

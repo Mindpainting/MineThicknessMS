@@ -81,7 +81,7 @@
             Controls.Add(btn_saveAsImage);
             Controls.Add(chart1);
             Name = "ChartForm";
-            Text = "ChartForm";
+            Text = "采矿量数据统计图";
             WindowState = FormWindowState.Maximized;
             ((System.ComponentModel.ISupportInitialize)chart1).EndInit();
             ResumeLayout(false);

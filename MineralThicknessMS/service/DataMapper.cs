@@ -12,7 +12,7 @@ namespace MineralThicknessMS.service
 {
     public class DataMapper
     {
-        public void addData(DataMsg dataMsg)
+        public async void addDataAsync(DataMsg dataMsg)
         {
             string sqlStr = "insert into test(data_time,latitude,longitude,gps_state,satellite,distance,depth,water_temperature,high," +
                            "velocity,boat_speed,navigation,guidance,rolling,level,temperature,device_state,mine_high,client_id,waterway_id,rectangle_id) " +
@@ -36,7 +36,7 @@ namespace MineralThicknessMS.service
                 new MySqlParameter("@guidance",dataMsg.getGuidance()),
                 new MySqlParameter("@rolling",dataMsg.getRolling()),
                 new MySqlParameter("@level",dataMsg.getLevel()),
-                new MySqlParameter("@mineHigh",dataMsg.getHigh() - Status.height1 - dataMsg.getDepth() - Status.height2),
+                new MySqlParameter("@mineHigh",dataMsg.getMineHigh()),
                 new MySqlParameter("@temperature",dataMsg.getTemperature()),
                 new MySqlParameter("@deviceState",dataMsg.getDeviceState()),
                 new MySqlParameter("@clientId",dataMsg.getClientId()),
@@ -46,10 +46,10 @@ namespace MineralThicknessMS.service
             MySQLHelper.ExecSqlQuery(sqlStr, param);
         }
         
-        //查固定航道固定网格内数据，实时渲染，返回DataMsg集合
-        public List<DataMsg> getRealtimeRenderData(int waterwayId, int rectangleId)
+        //查固定航道固定网格内矿厚
+        public static async Task<double> getGridMineThickness(int waterwayId, int rectangleId)
         {
-            string sqlStr = "select * from test where waterway_id = @waterwayId and rectangle_id = @rectangleId";
+            string sqlStr = "select avg_mine_depth from mproduce where waterway_id = @waterwayId and rectangle_id = @rectangleId order by date_time desc limit 1";
 
             MySqlParameter[] param = new MySqlParameter[]
             {
@@ -58,15 +58,12 @@ namespace MineralThicknessMS.service
             };
             DataSet dataSet = MySQLHelper.ExecSqlQuery(sqlStr, param);
 
-            List<DataMsg> list = new();
+            double avg_mine_depth  = -999;
             foreach (DataRow row in dataSet.Tables[0].Rows)
-            {   
-                DataMsg msg = new DataMsg();
-                msg.setMineHigh(Convert.ToDouble(row["mine_high"]));
-                list.Add(msg);
+            {
+                avg_mine_depth = Convert.ToDouble(row["avg_mine_depth"]);
             }
-            return list;
+            return avg_mine_depth;
         }
-
     }
 }

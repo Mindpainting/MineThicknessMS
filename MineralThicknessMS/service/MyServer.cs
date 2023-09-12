@@ -19,16 +19,21 @@ namespace MineralThicknessMS.service
         private DataMapper dataMapper;
         private MsgDecode msgDecode;
         private entity.Status status;
-        public bool openFlag = false;
 
-        public MyServer(string port)
+        public MyServer() 
+        {
+            server = new TcpServer();
+        }
+
+        public MyServer(int port)
         {
             dataMapper = new DataMapper();
             msgDecode = new MsgDecode();
             Control.CheckForIllegalCrossThreadCalls = false;
             server = new TcpServer();
             status = new entity.Status();
-            server.Port = int.Parse(port);
+            server.Port = port;
+
             server.ClientConnected += Server_ClientConnected;
         }
 
@@ -36,14 +41,12 @@ namespace MineralThicknessMS.service
         public void tsmiStart_Click(object sender, EventArgs e)
         {
             server.StartAsync();
-            openFlag = true;
         }
 
         //关闭服务
         public void tsmiStop_Click(object sender, EventArgs e)
         {
             server.CloseAsync();
-            openFlag = false;
         }
 
 
@@ -52,26 +55,47 @@ namespace MineralThicknessMS.service
             e.Client.OnDataReceived += Client_OnDataReceived;
         }
 
-        private void Server_ClientDisconnected(object sender, STTech.BytesIO.Tcp.Entity.ClientDisconnectedEventArgs e)
+        public async void Client_OnDataReceived(object sender, STTech.BytesIO.Core.DataReceivedEventArgs e)
         {
-
-        }
-
-        public void Client_OnDataReceived(object sender, STTech.BytesIO.Core.DataReceivedEventArgs e)
-        {
-            TcpClient tcpClient = (TcpClient)sender;
-            String str = e.Data.EncodeToString();
-            DataMsg dataMsg = new DataMsg();
-            dataMsg = msgDecode.msgSplit(str);
-            if(dataMsg.getMsgBegin() == "$GPGGA" && dataMsg.getMsgEnd() == "*5F"
-                && dataMsg.getWaterwayId() != 0 && dataMsg.getRectangleId() !=0
-                && dataMsg.getMineHigh() >= 0
-                )
+            await Task.Run(() =>
             {
-                dataMapper.addData(dataMsg);
+                TcpClient tcpClient = (TcpClient)sender;
+                String str = e.Data.EncodeToString();
+
+                DataMsg dataMsg = new DataMsg();
+                dataMsg = msgDecode.msgSplit(str);
+
                 status.setStatus(dataMsg);
-            }
+
+                if (dataMsg.getMsgBegin() == "$GPGGA" && dataMsg.getMsgEnd() == "*5F"
+                    && dataMsg.getWaterwayId() >= 0 && dataMsg.getRectangleId() >= 0
+                    && dataMsg.getMineHigh() >= 0 && dataMsg.getDepth() >= 0.3 && dataMsg.getGpsState() == 4
+                )
+                {
+                    // Assuming dataMapper.addDataAsync method exists and it's an asynchronous operation.
+                    dataMapper.addDataAsync(dataMsg); // ConfigureAwait(false) to avoid capturing UI context.
+                }
+            });
         }
+
+        //public void Client_OnDataReceived(object sender, STTech.BytesIO.Core.DataReceivedEventArgs e)
+        //{
+        //    TcpClient tcpClient = (TcpClient)sender;
+        //    String str = e.Data.EncodeToString();
+
+        //    DataMsg dataMsg = new DataMsg();
+        //    dataMsg = msgDecode.msgSplit(str);
+
+        //    status.setStatus(dataMsg);
+
+        //    if (dataMsg.getMsgBegin() == "$GPGGA" && dataMsg.getMsgEnd() == "*5F"
+        //        && dataMsg.getWaterwayId() != 0 && dataMsg.getRectangleId() != 0
+        //        && dataMsg.getMineHigh() >= 0 && dataMsg.getDepth() >= 0.3 && dataMsg.getGpsState() == 4
+        //        )
+        //    {
+        //        dataMapper.addDataAsync(dataMsg);
+        //    }
+        //}
 
         //发送消息给服务端
         public void Client_OnDataSent(object sender, EventArgs e, string msg)
@@ -80,12 +104,12 @@ namespace MineralThicknessMS.service
             {
                 if (server.Clients.Last() == server.Clients.First())
                 {
-                    server.Clients.Last().Send(msg.GetBytes());
+                    server.Clients.Last().SendAsync(msg.GetBytes());
                 }
                 else
                 {
-                    server.Clients.Last().Send(msg.GetBytes());
-                    server.Clients.First().Send(msg.GetBytes());
+                    server.Clients.Last().SendAsync(msg.GetBytes());
+                    server.Clients.First().SendAsync(msg.GetBytes());
                 }
             }
             catch (Exception ex)
@@ -94,12 +118,6 @@ namespace MineralThicknessMS.service
             }
         }
 
-        ////获取本机局域网ip
-        //public string getIp()
-        //{
-        //    IPHostEntry iPHostEntry = Dns.GetHostEntry(Dns.GetHostName());
-        //    return iPHostEntry.AddressList[1].ToString();
-        //}
         public string getIp()
         {
             string hostname = Dns.GetHostName();

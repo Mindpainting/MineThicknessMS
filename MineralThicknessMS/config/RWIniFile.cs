@@ -1,16 +1,17 @@
 ﻿using MineralThicknessMS.entity;
 using MineralThicknessMS.service;
 using GMap.NET;
+using System.IO.Ports;
 
 namespace MineralThicknessMS.config
 {
     public class RWIniFile
     {
-        //获取init.ini路径
 /*        private static string baseDirectory = Directory.GetCurrentDirectory();
-        private static string rootPath = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\"));
-        private static string filePath = Path.Combine(rootPath, @"config\init.ini");*/
+        private static string rootPath = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\"));
+        private static string filePath = Path.Combine(rootPath, @"Release\net6.0-windows\init.ini");*/
 
+        //C:\Users\Lenovo\Desktop\MainBranch\MineralThicknessMS\bin\Debug\net6.0-windows\init.ini
         private static string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "init.ini");
 
         private static readonly Dictionary<string, string> initData = new();
@@ -21,36 +22,60 @@ namespace MineralThicknessMS.config
             string[] lines = new string[]
             {
             "# 盐池编号",
-            "SaltBoundId=Y31",
+            "SaltBoundId=Y45",
             "",
-            "# 盐池四个角点",
-            "LeftUpLat=40.2531571096",
-            "LeftUpLng=90.4901935097",
-            "LeftDownLat=40.2507185251",
-            "LeftDownLng=90.4834874450",
-            "RightDownLat=40.2425903988",
-            "RightDownLng=90.4939599525",
-            "RightUpLat=40.2450507356",
-            "RightUpLng=90.5006782956",
+            "# 原Y45盐池四个角点",
+            "LeftDownLat=40.27459093",
+            "LeftDownLng=90.48501327",
+            "LeftUpLat=40.28105912",
+            "LeftUpLng=90.49171266",
+            "RightUpLat=40.27120563",
+            "RightUpLng=90.50493119",
+            "RightDownLat=40.26472789",
+            "RightDownLng=90.50224275",
             "",
             "# 盐池底板高度",
-            "FloorHeight=766.32",
+            "FloorHeight=722.933",
             "",
             "# 支架高度",
-            "BracketHeight=1.5",
+            "BracketHeight=2.31",
             "",
             "# 测深系数",
-            "MeasureCoefficient=2.0"
-                /* 
-                            "LeftUpLat=40.2810614738",
-                            "LeftUpLng=90.4917205106",
-                            "LeftDownLat=40.2745895561",
-                            "LeftDownLng=90.4850289188",
-                            "RightDownLat=40.2647281553",
-                            "RightDownLng=90.5022922085",
-                            "RightUpLat=40.2712197832",
-                            "RightUpLng=90.5048896228",
-                */
+            "MeasureCoefficient=1.3225",
+            "",
+            "#两GPS至船中轴线距离",
+            "GPSToCenterAxisDis=4.47",
+            "",
+            "# QGPS 中轴线点至前切割机距离",
+            "QGPS_BeforeDis=7.4",
+            "# QGPS 中轴线点至后切割机距离",
+            "QGPS_AfterDis=40.2",
+            "",
+            "# HGPS 中轴线点至前切割机距离",
+            "HGPS_BeforeDis=40.7",
+            "# HGPS 中轴线点至后切割机距离",
+            "HGPS_AfterDis=6.9"
+
+            //"# y31盐池四个角点",
+            //"LeftUpLat=40.2531571096",
+            //"LeftUpLng=90.4901935097",
+            //"LeftDownLat=40.2507185251",
+            //"LeftDownLng=90.4834874450",
+            //"RightDownLat=40.2425903988",
+            //"RightDownLng=90.4939599525",
+            //"RightUpLat=40.2450507356",
+            //"RightUpLng=90.5006782956",
+                
+                             
+            //"# 现Y45盐池四个角点",
+            //"LeftUpLat=40.28105912",
+            //"LeftUpLng=90.49171266",
+            //"LeftDownLat=40.27459093",
+            //"LeftDownLng=90.48501327",
+            //"RightDownLat=40.26472789",
+            //"RightDownLng=90.50224275",
+            //"RightUpLat=40.27120563",
+            //"RightUpLng=90.50493119",
             };
             File.WriteAllLines(filePath, lines);
         }
@@ -115,6 +140,11 @@ namespace MineralThicknessMS.config
         // 把读取的数据赋给项目中的变量
         public static void InitData() 
         {
+            if (!File.Exists(filePath))
+            {
+                File.Create(filePath).Close();
+                WriteIniFile();
+            }
             using (StreamReader reader = new(filePath))
             {
                 string line;
@@ -143,11 +173,23 @@ namespace MineralThicknessMS.config
             Status.height1 = Convert.ToDouble(initData["BracketHeight"]);
             Status.height2 = Convert.ToDouble(initData["FloorHeight"]);
             Status.measureCoefficient = Convert.ToDouble(initData["MeasureCoefficient"]);
+            Status.GPSToCenterAxisDis = Convert.ToDouble(initData["GPSToCenterAxisDis"]);
 
-            BoundaryPoints.LeftUp = new PointLatLng(Convert.ToDouble(initData["LeftUpLat"]), Convert.ToDouble(initData["LeftUpLng"]));
+            Status.QDisToCH[0] = Convert.ToDouble(initData["QGPS_BeforeDis"]);
+            Status.QDisToCH[1] = Convert.ToDouble(initData["QGPS_AfterDis"]);
+            Status.HDisToCH[0] = Convert.ToDouble(initData["HGPS_BeforeDis"]);
+            Status.HDisToCH[1] = Convert.ToDouble(initData["HGPS_AfterDis"]);
+
             BoundaryPoints.LeftDown = new PointLatLng(Convert.ToDouble(initData["LeftDownLat"]), Convert.ToDouble(initData["LeftDownLng"]));
-            BoundaryPoints.RightDown = new PointLatLng(Convert.ToDouble(initData["RightDownLat"]), Convert.ToDouble(initData["RightDownLng"]));
+            BoundaryPoints.LeftUp = new PointLatLng(Convert.ToDouble(initData["LeftUpLat"]), Convert.ToDouble(initData["LeftUpLng"]));
             BoundaryPoints.RightUp = new PointLatLng(Convert.ToDouble(initData["RightUpLat"]), Convert.ToDouble(initData["RightUpLng"]));
+            BoundaryPoints.RightDown = new PointLatLng(Convert.ToDouble(initData["RightDownLat"]), Convert.ToDouble(initData["RightDownLng"]));
+
+/*            string[] str = initData["SerialPort"].Split(",");
+            foreach (string s in str)
+            {
+                MySerialClient.serialPortIni.Add(new SerialPort(s));
+            }*/
         }
     }
 }

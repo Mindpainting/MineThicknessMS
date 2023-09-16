@@ -64,6 +64,9 @@ namespace MineralThicknessMS.entity
         //网格底面积
         public static double s = 81;
 
+        //数据更新时间(UTC时间)
+        public static DateTime[] dataRefreshUTCTime = new DateTime[2];
+
         public void setStatus(DataMsg dataMsg)
         {
             try
@@ -102,6 +105,7 @@ namespace MineralThicknessMS.entity
                 mineDepth[clientId] = Math.Round(dataMsg.getHigh() - height1 - (dataMsg.getDepth())*measureCoefficient - height2,2);
                 ori[clientId] = dataMsg.getNavigation();
                 rolling[clientId] = dataMsg.getRolling();
+                dataRefreshUTCTime[clientId] = dataMsg.getDataTime();
                 switch (dataMsg.getGpsState())
                 {
                     case 0:

@@ -15,14 +15,15 @@ using Org.BouncyCastle.Asn1;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.IO.Ports;
 using Status = MineralThicknessMS.entity.Status;
+using System.Reflection;
 
 namespace MineralThicknessMS
 {
     public partial class MainForm : Form
     {
-        private MyServer myserver;
+        public static MyServer myserver;
         private MySerialClient myserialclient;
-        private Instruction instruction;
+        public static Instruction instruction;
         private MsgDecode msgDecode;
         private GMapOverlay overlay;//GMap图层
         private GMarkerGoogle scjMarker;//水采机标记
@@ -32,9 +33,11 @@ namespace MineralThicknessMS
         public MainForm()
         {
             InitializeComponent();
+            GMapInit();//地图初始化 
             InitializeSerialPortComboBox();
+            Task.Run(() => { GridInMapInit(); });
             instruction = new Instruction();
-            myserver = new MyServer();
+            //myserver = new MyServer();
             myserialclient = new MySerialClient();
             msgDecode = new MsgDecode();
             overlay = new GMapOverlay();
@@ -71,8 +74,12 @@ namespace MineralThicknessMS
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            GMapInit();//地图初始化
-            GridInMapInit();//生成网格
+            
+            gMapControl.MouseDoubleClick += gMapControl_MouseDoubleClick;
+
+            //软件启动自动开启TCP服务
+            myserver = new MyServer(10001);
+            myserver.tsmiStart_Click(sender, e);
 
             //开启定时器1
             timer1.Interval = 10;
@@ -91,6 +98,63 @@ namespace MineralThicknessMS
             timer4.Interval = 3000;
             timer4.Start();
             timer4.Tick += new System.EventHandler(chPositionMTUpdate);
+
+            //定时冲洗定时器
+            timer5.Interval = 1000;
+            timer5.Start();
+            timer5.Tick += new System.EventHandler(autoWashTimer);
+        }
+
+        private async void autoWashTimer(object sender, EventArgs e)
+        {
+            if (myserver.server.IsRunning)
+            {
+                TimeSpan timeNow = new TimeSpan(DateTime.Now.Hour, DateTime.Now.Minute, DateTime.Now.Second);
+                if (timeNow == dateTimePickerAutoWash.Value.TimeOfDay)
+                {
+                    await Task.Run(() =>
+                    {
+                        autoWash(sender, e);
+                    });
+                }
+            }
+        }
+
+        //定时冲洗函数
+        private async void autoWash(object sender, EventArgs e)
+        {
+            try
+            {
+                //开启左侧冲水
+                myserver.Client_OnDataSent_AutoWash(sender, e, instruction.getStartWashingL());
+                await Task.Delay(1);
+                //开启右侧冲水
+                myserver.Client_OnDataSent_AutoWash(sender, e, instruction.getStartWashingR());
+                await Task.Delay(1);
+                //折叠左支架
+                myserver.Client_OnDataSent_AutoWash(sender, e, instruction.getBracketLMoveDown());
+                await Task.Delay(1);
+                //折叠右支架
+                myserver.Client_OnDataSent_AutoWash(sender, e, instruction.getBracketRMoveDown());
+
+                //冲洗时长
+                double delayMilliseconds = MsgDecode.StrConvertToDou(comboBoxWashTime.Text);
+                await Task.Delay((int)(delayMilliseconds * 60 * 1000));
+
+                //关闭左侧冲水
+                myserver.Client_OnDataSent_AutoWash(sender, e, instruction.getStopWashingL());
+                await Task.Delay(1);
+                //关闭右侧冲水
+                myserver.Client_OnDataSent_AutoWash(sender, e, instruction.getStopWashingR());
+
+                //询问继续测量还是保持折叠状态
+                AutoWashEndForm autoWashEndForm = new AutoWashEndForm();
+                autoWashEndForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+
+            }
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -109,13 +173,9 @@ namespace MineralThicknessMS
                 //0表示左后方测深仪(HGPS)，1表示右前方测深仪(QGPS)
                 if (Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1 && Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1)
                 {
-                    //PointLatLng p1 = new(GridView.dmsTodeg(40.273970833427633), GridView.dmsTodeg(90.5005277153964));
-                    //PointLatLng p2 = new(GridView.dmsTodeg(40.273853674353354), GridView.dmsTodeg(90.500396239991787));
-                    //overlay.Markers.Add(new AMapMarker(p1, 12));
-                    //overlay.Markers.Add(new AMapMarker(p2, 12));
-
                     double[] mt = await myserialclient.GetCHPositionMT();
-                    BeginInvoke(new Action(() => 
+
+                    BeginInvoke(new Action(() =>
                     {
                         if (Status.ori[0] < 90 && Status.ori[1] < 90)
                         {
@@ -136,82 +196,147 @@ namespace MineralThicknessMS
         }
 
         // GMap基础信息初始化
-        private async void GMapInit()
+        private void GMapInit()
         {
-            await Task.Run(() =>
-            {
-                gMapControl = new GMapControl();
-                gMapControl.Bearing = 0F;
-                gMapControl.CanDragMap = true;
-                gMapControl.Dock = DockStyle.Fill;
-                gMapControl.EmptyTileColor = Color.Navy;
-                gMapControl.GrayScaleMode = true;
-                gMapControl.HelperLineOption = HelperLineOptions.DontShow;
-                gMapControl.LevelsKeepInMemory = 5;
-                gMapControl.Location = new Point(0, 0);
-                gMapControl.Margin = new Padding(4);
-                gMapControl.MarkersEnabled = true;
-                gMapControl.MouseWheelZoomEnabled = true;
-                gMapControl.MouseWheelZoomType = MouseWheelZoomType.MousePositionAndCenter;
-                gMapControl.Name = "gMapControl";
-                gMapControl.NegativeMode = false;
-                gMapControl.PolygonsEnabled = true;
-                gMapControl.RetryLoadTile = 0;
-                gMapControl.RoutesEnabled = true;
-                gMapControl.ScaleMode = ScaleModes.Fractional;
-                gMapControl.SelectedAreaFillColor = Color.FromArgb(33, 65, 105, 225);
-                gMapControl.ShowTileGridLines = false;
-                gMapControl.Size = new Size(1859, 1362);
-                gMapControl.TabIndex = 0;
-                gMapControl.Zoom = 0D;
+            gMapControl = new GMapControl();
+            gMapControl.Bearing = 0F;
+            gMapControl.CanDragMap = true;
+            gMapControl.Dock = DockStyle.Fill;
+            gMapControl.EmptyTileColor = Color.Navy;
+            gMapControl.GrayScaleMode = true;
+            gMapControl.HelperLineOption = HelperLineOptions.DontShow;
+            gMapControl.LevelsKeepInMemory = 5;
+            gMapControl.Location = new Point(0, 0);
+            gMapControl.Margin = new Padding(4);
+            gMapControl.MarkersEnabled = true;
+            gMapControl.MouseWheelZoomEnabled = true;
+            gMapControl.MouseWheelZoomType = MouseWheelZoomType.MousePositionAndCenter;
+            gMapControl.Name = "gMapControl";
+            gMapControl.NegativeMode = false;
+            gMapControl.PolygonsEnabled = true;
+            gMapControl.RetryLoadTile = 0;
+            gMapControl.RoutesEnabled = true;
+            gMapControl.ScaleMode = ScaleModes.Fractional;
+            gMapControl.SelectedAreaFillColor = Color.FromArgb(33, 65, 105, 225);
+            gMapControl.ShowTileGridLines = false;
+            gMapControl.Size = new Size(1859, 1362);
+            gMapControl.TabIndex = 0;
+            gMapControl.Zoom = 0D;
 
-                gMapControl.Manager.Mode = AccessMode.ServerAndCache;
-                //缓存位置
-                gMapControl.CacheLocation = Environment.CurrentDirectory + "\\GMapCache\\";
+            gMapControl.Manager.Mode = AccessMode.ServerAndCache;
+            //缓存位置
+            gMapControl.CacheLocation = Environment.CurrentDirectory + "\\GMapCache\\";
 
-                //gMapControl.MapProvider = AMapProvider.Instance; //高德地图
-                gMapControl.MapProvider = GMapProviders.BingSatelliteMap;
-                gMapControl.MinZoom = 2;  //最小比例
-                gMapControl.MaxZoom = 22; //最大比例
-                gMapControl.Zoom = 13;     //当前比例
-                gMapControl.ShowCenter = false; //不显示中心十字点
-                gMapControl.DragButton = MouseButtons.Left; //左键拖拽地图
-                gMapControl.Position = new PointLatLng(40.42734887689348, 90.79702377319336); //地图中心位置
-            });
+            //gMapControl.MapProvider = AMapProvider.Instance; //高德地图
+            gMapControl.MapProvider = GMapProviders.BingSatelliteMap;
+            gMapControl.MinZoom = 2;  //最小比例
+            gMapControl.MaxZoom = 22; //最大比例
+            gMapControl.Zoom = 13;     //当前比例
+            gMapControl.ShowCenter = false; //不显示中心十字点
+            gMapControl.DragButton = MouseButtons.Left; //左键拖拽地图
+            gMapControl.Position = new PointLatLng(40.42734887689348, 90.79702377319336); //地图中心位置
             splitContainer1.Panel2.Controls.Add(gMapControl);
         }
 
-        //生成网格
+        // 双击获取网格所在航道，网格编号
+        private void gMapControl_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            // 获取鼠标点击的屏幕坐标
+            int mouseX = e.X;
+            int mouseY = e.Y;
+
+            // 获取鼠标点击位置的经纬度坐标
+            PointLatLng point = gMapControl.FromLocalToLatLng(mouseX, mouseY);
+
+            // point 现在包含了鼠标点击位置的经纬度坐标
+            double latitude = point.Lat;
+            double longitude = point.Lng;
+
+            Grid grid = GridView.pointInGrid(Status.grids, point);
+            if (grid.Id != 0)
+            {
+                //MessageBox.Show(latitude.ToString() + " " + longitude.ToString());
+                MessageBox.Show("航道编号: " + grid.Column + "\n" + "网格编号: " + grid.Row, "航道-网格");
+            }
+        }
+
+        //生成网格并绘制网格
         private async void GridInMapInit()
         {
             List<List<Grid>> gridList = await GridView.gridBuildAsync(BoundaryPoints.boundaryPointsList());
             Status.grids = gridList;
 
-            await Task.Run(() =>
+            List<Grid> list = new();
+            gridList.ForEach(aChannelGrid =>
             {
-                //遍历每一个格子，在地图上绘制
-                gridList.ForEach(aChannelGrid =>
+                aChannelGrid.ForEach(aGrid =>
                 {
-                    aChannelGrid.ForEach(aGrid =>
-                    {
-                        overlay.Polygons.Add(new(aGrid.PointLatLngs, "gridPolygon")
-                        {
-                            Stroke = new Pen(Color.Yellow, 2)
-                        });
-                    });
+                    list.Add(aGrid);
                 });
+            });
 
-                // 创建多边形
+            List<Produce> produces = DataAnalysis.GetLatestProduceData(DateTime.Today);
+
+            List<GMapPolygon> polygons = new();
+            for (int i = 0; i < list.Count; i++)
+            {
+                GMapPolygon gridPolygon = new(list[i].PointLatLngs, "gridPolygon");
+                gridPolygon.Stroke = new Pen(Color.Yellow, 2);
+                double mt = produces[i].AverageElevation;
+                if (mt < 0)
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.White));
+                }
+                else if (mt > 0 && mt <= 0.5)
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Cyan));
+                }
+                else if (mt > 0.5 && mt <= 1)
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.SkyBlue));
+                }
+                else if (mt > 1 && mt <= 1.5)
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.PaleGreen));
+                }
+                else if (mt > 1.5 && mt <= 2)
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Yellow));
+                }
+                else if (mt > 2 && mt <= 2.5)
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Orange));
+                }
+                else if (mt > 2.5 && mt <= 3)
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.OrangeRed));
+                }
+                else
+                {
+                    gridPolygon.Fill = new SolidBrush(Color.FromArgb(255, Color.Purple));
+                }
+                polygons.Add(gridPolygon);
+            }
+
+            // 绘制网格
+            BeginInvoke(new Action<List<GMapPolygon>>((polygons) =>
+            {
+                foreach (GMapPolygon item in polygons)
+                {
+                    overlay.Polygons.Add(item);
+                }
                 GMapPolygon polygon = new(BoundaryPoints.getCorrectedPoints(), "polygon")
                 {
-                    // 设置多边形填充颜色
                     Fill = new SolidBrush(Color.FromArgb(50, Color.ForestGreen)),
-                    // 设置多边形边界颜色和宽度
                     Stroke = new Pen(Color.Yellow, 3)
                 };
                 overlay.Polygons.Add(polygon);
-            });
-            BeginInvoke(new Action(() => { gMapControl.Overlays.Add(overlay); }));
+                gMapControl.Overlays.Add(overlay);
+                // 强制刷新 GMap 控件
+                //gMapControl.Refresh();
+                splitContainer1.SplitterWidth--;
+                splitContainer1.Width--;
+            }), polygons);
         }
 
         //绘制图例
@@ -370,7 +495,7 @@ namespace MineralThicknessMS
 
                 //标记水采机位置
                 if (Status.latitude[0] != 0 && Status.longitude[0] != 0 && Status.latitude[1] != 0 && Status.longitude[1] != 0 &&
-                    Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1 && Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1 )
+                    Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1 && Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1)
                 {
                     if (scjMarker != null)
                     {
@@ -511,6 +636,7 @@ namespace MineralThicknessMS
                 label7.Text = "水深：" + Math.Round((Status.depth[1]) * Status.measureCoefficient, 2) + "m";
                 label8.Text = "矿厚：" + Math.Round(Status.mineDepth[1], 2) + "m";
                 label11.Text = "GPS定位状态：" + Status.GPSState[1];
+                label19.Text = "数据更新时间：" + Status.dataRefreshUTCTime[1].ToString();
 
                 //水采机1
                 radioButton18.Checked = Status.bracket[0];
@@ -522,6 +648,7 @@ namespace MineralThicknessMS
                 label13.Text = "水深：" + Math.Round((Status.depth[0]) * Status.measureCoefficient, 2) + "m";
                 label12.Text = "矿厚：" + Math.Round(Status.mineDepth[0], 2) + "m";
                 label16.Text = "GPS定位状态：" + Status.GPSState[0];
+                label10.Text = "数据更新时间：" + Status.dataRefreshUTCTime[0].ToString();
             }));
         }
 
@@ -629,22 +756,22 @@ namespace MineralThicknessMS
 
         private void btnSonarPositionSelfCheck_Click(object sender, EventArgs e)
         {
-            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionSelfCheck());
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionSelfCheckL());
         }
 
         private void btnMoveSonarPositionToSelfCheck_Click(object sender, EventArgs e)
         {
-            myserver.Client_OnDataSent(sender, e, instruction.getMoveSonarPositionToSelfCheck());
+            myserver.Client_OnDataSent(sender, e, instruction.getMoveSonarPositionToSelfCheckL());
         }
 
         private void btnSonarPositionMoveUp_Click(object sender, EventArgs e)
         {
-            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveUp());
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveUpL());
         }
 
         private void btnSonarPositionMoveDown_Click(object sender, EventArgs e)
         {
-            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveDown());
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveDownL());
         }
         //结束
 
@@ -1224,6 +1351,36 @@ namespace MineralThicknessMS
             }
 
             btnInportOuterData.Enabled = true;
+        }
+
+        private void btnSonarPositionSelfCheckR_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionSelfCheckR());
+        }
+
+        private void btnMoveSonarPositionToSelfCheckR_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getMoveSonarPositionToSelfCheckR());
+        }
+
+        private void btnSonarPositionMoveUpR_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveUpR());
+        }
+
+        private void btnSonarPositionMoveDownR_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMoveDownR());
+        }
+
+        private void btnSonarPositionMaintainR_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMaintainR());
+        }
+
+        private void btnSonarPositionMaintainL_Click(object sender, EventArgs e)
+        {
+            myserver.Client_OnDataSent(sender, e, instruction.getSonarPositionMaintainL());
         }
     }
 }

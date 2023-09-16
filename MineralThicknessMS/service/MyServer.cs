@@ -118,6 +118,27 @@ namespace MineralThicknessMS.service
             }
         }
 
+        //发送消息给服务端
+        public void Client_OnDataSent_AutoWash(object sender, EventArgs e, string msg)
+        {
+            try
+            {
+                if (server.Clients.Last() == server.Clients.First())
+                {
+                    server.Clients.Last().SendAsync(msg.GetBytes());
+                }
+                else
+                {
+                    server.Clients.Last().SendAsync(msg.GetBytes());
+                    server.Clients.First().SendAsync(msg.GetBytes());
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
         public string getIp()
         {
             string hostname = Dns.GetHostName();

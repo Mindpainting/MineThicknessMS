@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,10 +9,17 @@ namespace MineralThicknessMS.entity
 {
     public class Instruction
     {
-        private String SonarPositionSelfCheck = "$SonarPositionSelfCheck\r\n";//水位自检测
-        private String MoveSonarPositionToSelfCheck = "$MoveSonarPositionToSelfCheck\r\n";//测深仪移动至自检位置
-        private String SonarPositionMoveUp = "$SonarPositionMoveUp:\r\n";//向上移动*秒
-        private String SonarPositionMoveDown = "$SonarPositionMoveDown:\r\n";//向下移动*秒
+        private String SonarPositionSelfCheckL = "$SonarPositionSelfCheckL\r\n";//左水位自检测
+        private String MoveSonarPositionToSelfCheckL = "$MoveSonarPositionToSelfCheckL\r\n";//左测深仪移动至自检位置
+        private String SonarPositionMoveUpL = "$SonarPositionMoveUpL:\r\n";//左向上移动*秒
+        private String SonarPositionMoveDownL = "$SonarPositionMoveDownL:\r\n";//左向下移动*秒
+        private String SonarPositionMaintainL = "$SonarPositionMaintainL:\r\n";//左测杆自动调整
+
+        private String SonarPositionSelfCheckR = "$SonarPositionSelfCheckR\r\n";//右水位自检测
+        private String MoveSonarPositionToSelfCheckR = "$MoveSonarPositionToSelfCheckR\r\n";//右测深仪移动至自检位置
+        private String SonarPositionMoveUpR = "$SonarPositionMoveUpR:\r\n";//右向上移动*秒
+        private String SonarPositionMoveDownR = "$SonarPositionMoveDownR:\r\n";//右向下移动*秒
+        private String SonarPositionMaintainR = "$SonarPositionMaintainR:\r\n";//右测杆自动调整
 
         private String BracketLMoveUp = "$BracketLMoveUp\r\n";  //左侧支架向上伸展
         private String BracketLMoveDown = "$BracketLMoveDown\r\n";  //左侧支架向下伸展
@@ -39,25 +47,59 @@ namespace MineralThicknessMS.entity
         private String StartTankHeatingR = "$StartTankHeatingR\r\n";    //右侧加热启动
         private String StopTankHeatingR = "$StopTankHeatingR\r\n";//右侧加热关闭
 
-        public String getSonarPositionMoveDown()
+        //右
+        public String getSonarPositionMoveDownR()
         {
-            return this.SonarPositionMoveDown;
+            return this.SonarPositionMoveDownR;
         }
 
-        public String getSonarPositionMoveUp()
+        public String getSonarPositionMoveUpR()
         {
-            return this.SonarPositionMoveUp;
+            return this.SonarPositionMoveUpR;
         }
 
-        public String getMoveSonarPositionToSelfCheck()
+        public String getMoveSonarPositionToSelfCheckR()
         {
-            return this.MoveSonarPositionToSelfCheck;
+            return this.MoveSonarPositionToSelfCheckR;
         }
 
-        public String getSonarPositionSelfCheck()
+        public String getSonarPositionSelfCheckR()
         {
-            return this.SonarPositionSelfCheck;
+            return this.SonarPositionSelfCheckR;
         }
+
+        public String getSonarPositionMaintainR()
+        {
+            return this.SonarPositionMaintainR;
+        }
+        //
+
+        //左
+        public String getSonarPositionMoveDownL()
+        {
+            return this.SonarPositionMoveDownL;
+        }
+
+        public String getSonarPositionMoveUpL()
+        {
+            return this.SonarPositionMoveUpL;
+        }
+
+        public String getMoveSonarPositionToSelfCheckL()
+        {
+            return this.MoveSonarPositionToSelfCheckL;
+        }
+
+        public String getSonarPositionSelfCheckL()
+        {
+            return this.SonarPositionSelfCheckL;
+        }
+
+        public String getSonarPositionMaintainL()
+        {
+            return this.SonarPositionMaintainL;
+        }
+        //
 
         public String getBracketLMoveUp()
         {

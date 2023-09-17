@@ -593,16 +593,16 @@
             ToolStripMenuItem8.Font = new Font("Microsoft YaHei UI", 11F, FontStyle.Regular, GraphicsUnit.Point);
             ToolStripMenuItem8.ForeColor = Color.Red;
             ToolStripMenuItem8.Name = "ToolStripMenuItem8";
-            ToolStripMenuItem8.Size = new Size(177, 38);
-            ToolStripMenuItem8.Text = "北侧矿厚：0.00m";
+            ToolStripMenuItem8.Size = new Size(180, 38);
+            ToolStripMenuItem8.Text = "北侧矿厚：-999m";
             // 
             // ToolStripMenuItem9
             // 
             ToolStripMenuItem9.Font = new Font("Microsoft YaHei UI", 11F, FontStyle.Regular, GraphicsUnit.Point);
             ToolStripMenuItem9.ForeColor = Color.Green;
             ToolStripMenuItem9.Name = "ToolStripMenuItem9";
-            ToolStripMenuItem9.Size = new Size(177, 38);
-            ToolStripMenuItem9.Text = "南侧矿厚：0.00m";
+            ToolStripMenuItem9.Size = new Size(180, 38);
+            ToolStripMenuItem9.Text = "南侧矿厚：-999m";
             // 
             // toolStrip1
             // 

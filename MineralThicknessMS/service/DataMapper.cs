@@ -59,10 +59,18 @@ namespace MineralThicknessMS.service
             DataSet dataSet = MySQLHelper.ExecSqlQuery(sqlStr, param);
 
             double avg_mine_depth  = -999;
-            foreach (DataRow row in dataSet.Tables[0].Rows)
+            try
             {
-                avg_mine_depth = Convert.ToDouble(row["avg_mine_depth"]);
+                foreach (DataRow row in dataSet.Tables[0].Rows)
+                {
+                    avg_mine_depth = Convert.ToDouble(row["avg_mine_depth"]);
+                }
             }
+            catch (Exception)
+            {
+            }
+
+            //返回-999，数据库中没有该网格数据
             return avg_mine_depth;
         }
     }

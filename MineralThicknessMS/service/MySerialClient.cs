@@ -80,8 +80,8 @@ namespace MineralThicknessMS.service
         //计算水采机前后切割机位置，返回切割机所在位置矿厚
         public async Task<double[]> GetCHPositionMT()
         {
-            //GPS没有数据或不在盐池内，矿厚都为零
-            double[] result = new double[2] { 0, 0 };
+            // GPS没有数据或不在盐池内，矿厚都为-999
+            double[] result = new double[2] { -999, -999 };
             //有经纬度表示GPS有数据传来，只有一个GPS数据不计算
             if (Status.latitude[0] != 0 && Status.longitude[0] != 0 && Status.latitude[1] != 0 && Status.longitude[1] != 0)
             {

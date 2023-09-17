@@ -74,7 +74,7 @@ namespace MineralThicknessMS
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            
+
             gMapControl.MouseDoubleClick += gMapControl_MouseDoubleClick;
 
             //软件启动自动开启TCP服务
@@ -192,7 +192,6 @@ namespace MineralThicknessMS
                     }));
                 }
             }
-
         }
 
         // GMap基础信息初始化

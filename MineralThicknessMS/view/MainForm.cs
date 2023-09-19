@@ -168,16 +168,16 @@ namespace MineralThicknessMS
         private async void chPositionMTUpdate(object sender, EventArgs e)
         {
             //有经纬度表示GPS有数据传来，只有一个GPS数据不计算
-            if (Status.latitude[0] != 0 && Status.longitude[0] != 0 && Status.latitude[1] != 0 && Status.longitude[1] != 0)
+            if (Status.latitude[1] != 0 && Status.longitude[1] != 0)
             {
                 //0表示左后方测深仪(HGPS)，1表示右前方测深仪(QGPS)
-                if (Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1 && Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1)
+                if (Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1)
                 {
                     double[] mt = await myserialclient.GetCHPositionMT();
 
                     BeginInvoke(new Action(() =>
                     {
-                        if (Status.ori[0] < 90 && Status.ori[1] < 90)
+                        if (Status.ori[1] < 90)
                         {
                             ToolStripMenuItem8.Text = "北侧矿厚：" + Math.Round(mt[0], 2).ToString("0.00") + "m";
                             ToolStripMenuItem9.Text = "南侧矿厚：" + Math.Round(mt[1], 2).ToString("0.00") + "m";
@@ -222,12 +222,13 @@ namespace MineralThicknessMS
             gMapControl.TabIndex = 0;
             gMapControl.Zoom = 0D;
 
-            gMapControl.Manager.Mode = AccessMode.ServerAndCache;
+            //gMapControl.Manager.Mode = AccessMode.ServerAndCache;
             //缓存位置
             gMapControl.CacheLocation = Environment.CurrentDirectory + "\\GMapCache\\";
 
             //gMapControl.MapProvider = AMapProvider.Instance; //高德地图
             gMapControl.MapProvider = GMapProviders.BingSatelliteMap;
+            gMapControl.Manager.Mode = AccessMode.CacheOnly;
             gMapControl.MinZoom = 2;  //最小比例
             gMapControl.MaxZoom = 22; //最大比例
             gMapControl.Zoom = 13;     //当前比例
@@ -565,7 +566,7 @@ namespace MineralThicknessMS
 
                     // 设置固定值到特定的单元格
                     row.Cells[0].Value = produce.Channel;
-                    row.Cells[1].Value = produce.AverageElevation;
+                    row.Cells[1].Value = Math.Round(produce.AverageElevation,2);
 
                     // 设置 Produce 对象的其他属性值
                     row.Cells[2].Value = dateTimePickerBegin.Value.ToShortDateString();
@@ -999,7 +1000,7 @@ namespace MineralThicknessMS
                     row.CreateCells(dataGridView2);
 
                     row.Cells[0].Value = produce.Channel;
-                    row.Cells[1].Value = produce.AverageElevation;
+                    row.Cells[1].Value = Math.Round(produce.AverageElevation,2);
 
                     row.Cells[2].Value = dateDayTimePicker.Value.ToShortDateString();
 
@@ -1175,101 +1176,6 @@ namespace MineralThicknessMS
                 chartForm.ShowDialog();
             }
         }
-
-        /*        private async void GetCHPositionMTTimer(object sender, EventArgs e)
-                {
-                    double[] mt = await GetCHPositionMT();
-                }*/
-
-        //计算水采机前后切割机位置，返回切割机所在位置矿厚
-        /*        private async Task<double[]> GetCHPositionMT()
-                {
-                    double[] result = new double[2] { -999, -999 };
-                    //0表示左后方测深仪(HGPS)，1表示右前方测深仪(QGPS)
-                    if ((Status.waterwayId[0] != -1 && Status.rectangleId[0] != -1) && (Status.waterwayId[1] != -1 && Status.rectangleId[1] != -1))
-                    {
-                        //左后GPS
-                        PointLatLng gpsLA = new(GridView.degTodms(Status.latitude[0]), GridView.degTodms(Status.longitude[0]));
-                        //右前GPS
-                        PointLatLng gpsRB = new(GridView.degTodms(Status.latitude[1]), GridView.degTodms(Status.longitude[1]));
-
-                        GpsXY.GetValueOfCoordSys();
-                        GpsXY.GaussBL_XY(GpsXY.m_Cs84, gpsLA.Lat, gpsLA.Lng, out double X1, out double Y1);
-                        GpsXY.GaussBL_XY(GpsXY.m_Cs84, gpsRB.Lat, gpsRB.Lng, out double X2, out double Y2);
-
-                        //平面坐标
-                        PointXY pointXY1 = new(X1, Y1);
-                        PointXY pointXY2 = new(X2, Y2);
-
-                        //高程
-                        double elevation1 = Status.height2;
-                        double elevation2 = Status.height2;
-
-                        GPSCoor gpsCoorLA = new(gpsLA.Lat, gpsLA.Lng, pointXY1.X, pointXY1.Y, elevation1);
-                        GPSCoor gpsCoorRB = new(gpsRB.Lat, gpsRB.Lng, pointXY2.X, pointXY2.Y, elevation2);
-                        GPSCoord.IniCoordSysTag();
-
-                        List<Grid> list = new();
-                        //HGPS横滚小于等于30使用HGPS计算前后切割机位置
-                        if (Status.rolling[0] <= 30)
-                        {
-                            double oriLA = Status.ori[0];
-                            //计算垂足
-                            GPSCoor footDownPoint = new();
-                            GPSCoord.CalPnt(gpsCoorLA, oriLA + 90, Status.GPSToCenterAxisDis, footDownPoint);
-
-                            //切割机位置D
-                            GPSCoor calPointDBefore = new();
-                            GPSCoor calPointDAfter = new();
-                            //
-                            GPSCoord.CalPnt(footDownPoint, oriLA, Status.HDisToCH[0], calPointDBefore);
-                            GPSCoord.CalPnt(footDownPoint, oriLA + 180, Status.HDisToCH[1], calPointDAfter);
-                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDBefore.LocN, calPointDBefore.LocE, out double B1, out double L1);
-                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDAfter.LocN, calPointDAfter.LocE, out double B2, out double L2);
-                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B1, L1)));
-                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B2, L2)));
-
-                            PointLatLng p1 = new(GridView.dmsTodeg(B1), GridView.dmsTodeg(L1));
-                            PointLatLng p2 = new(GridView.dmsTodeg(B2), GridView.dmsTodeg(L2));
-                            overlay.Markers.Add(new AMapMarker(p1, 12));
-                            overlay.Markers.Add(new AMapMarker(p2, 12));
-                        }
-                        else
-                        {
-                            double oriRB = Status.ori[1];
-
-                            //计算垂足
-                            GPSCoor footDownPoint = new();
-                            GPSCoord.CalPnt(gpsCoorRB, oriRB - 90, Status.GPSToCenterAxisDis, footDownPoint);
-
-                            //切割机位置D
-                            GPSCoor calPointDBefore = new();
-                            GPSCoor calPointDAfter = new();
-                            //
-                            GPSCoord.CalPnt(footDownPoint, oriRB, Status.HDisToCH[0], calPointDBefore);
-                            GPSCoord.CalPnt(footDownPoint, oriRB + 180, Status.HDisToCH[1], calPointDAfter);
-                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDBefore.LocN, calPointDBefore.LocE, out double B1, out double L1);
-                            GpsXY.GaussXY_BL(GpsXY.m_Cs0, calPointDAfter.LocN, calPointDAfter.LocE, out double B2, out double L2);
-                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B1, L1)));
-                            list.Add(GridView.selectGrid(BoundaryPoints.getCorrectedPoints(), Status.grids, new PointLatLng(B2, L2)));
-
-                            PointLatLng p1 = new(GridView.dmsTodeg(B1), GridView.dmsTodeg(L1));
-                            PointLatLng p2 = new(GridView.dmsTodeg(B2), GridView.dmsTodeg(L2));
-                            overlay.Markers.Add(new AMapMarker(p1, 12));
-                            overlay.Markers.Add(new AMapMarker(p2, 12));
-                        }
-
-                        for (int i = 0; i < list.Count; i++)
-                        {
-                            if (list[i].Id != 0)
-                            {
-                                //查数据库，查该格子矿厚
-                                result[i] = await DataMapper.getGridMineThickness(list[i].Column, list[i].Row);
-                            }
-                        }
-                    }
-                    return result;
-                }*/
 
         private void ToolStripMenuItem7_Click(object sender, EventArgs e)
         {

@@ -651,7 +651,7 @@ namespace MineralThicknessMS.service
                 worksheet.Cells[3, 3].Value = dateTimeBegin.ToShortDateString();
                 worksheet.Cells[3, 6].Value = dateTimeEnd.ToShortDateString();
                 worksheet.Cells[5, 4].Value = Status.saltBoundId;
-                worksheet.Cells[5,6].Value = sum;
+                worksheet.Cells[5,6].Value = Math.Round(sum,2);
 
                 // 从第9行开始写入数据
                 int startRow = 9;
@@ -669,7 +669,7 @@ namespace MineralThicknessMS.service
                     worksheet.Cells[startRow + row, 2].Value = produces[row].Channel.ToString();
 
                     // 写入采矿量
-                    worksheet.Cells[startRow + row, 3].Value = produces[row].AverageElevation.ToString();
+                    worksheet.Cells[startRow + row, 3].Value = Math.Round(produces[row].AverageElevation,2).ToString();
 
                     // 写入结束时间
                     worksheet.Cells[startRow + row, 4].Value = dateTimeBegin.ToShortDateString();
@@ -737,7 +737,7 @@ namespace MineralThicknessMS.service
 
                 worksheet.Cells[5, 4].Value = Status.saltBoundId;
 
-                worksheet.Cells[5, 6].Value = sum;
+                worksheet.Cells[5, 6].Value = Math.Round(sum, 2);
 
                 // 从第9行开始写入数据
                 int startRow = 9;
@@ -755,7 +755,7 @@ namespace MineralThicknessMS.service
                     worksheet.Cells[startRow + row, 2].Value = produces[row].Channel.ToString();
 
                     // 写入采矿量
-                    worksheet.Cells[startRow + row, 3].Value = produces[row].AverageElevation.ToString();
+                    worksheet.Cells[startRow + row, 3].Value = Math.Round(produces[row].AverageElevation,2).ToString();
 
                     // 写入结束时间
                     worksheet.Cells[startRow + row, 4].Value = dateTime.ToShortDateString();

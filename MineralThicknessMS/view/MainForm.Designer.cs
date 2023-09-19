@@ -110,7 +110,6 @@
             toolStripButton25 = new ToolStripButton();
             toolStripButton26 = new ToolStripButton();
             toolStripButton27 = new ToolStripButton();
-            toolStripSeparator1 = new ToolStripSeparator();
             toolStripButton28 = new ToolStripButton();
             toolStripButton29 = new ToolStripButton();
             toolStripButton30 = new ToolStripButton();
@@ -608,7 +607,7 @@
             // 
             toolStrip1.AutoSize = false;
             toolStrip1.ImageScalingSize = new Size(30, 30);
-            toolStrip1.Items.AddRange(new ToolStripItem[] { tSBtnAllowLeft, tSBtnAllowRight, toolStripSeparator3, toolStripButton21, toolStripButton22, toolStripSeparator11, toolStripButton1, toolStripButton2, toolStripButton3, toolStripButton4, toolStripButton5, toolStripButton6, toolStripSeparator4, toolStripButton7, toolStripButton8, toolStripButton9, toolStripButton10, toolStripButton11, toolStripButton12, toolStripSeparator7, toolStripButton13, toolStripButton14, toolStripButton15, toolStripButton16, toolStripSeparator8, toolStripButton17, toolStripButton18, toolStripButton19, toolStripButton20, toolStripSeparator12, toolStripButton23, toolStripButton24, toolStripButton25, toolStripButton26, toolStripButton27, toolStripSeparator1, toolStripButton28, toolStripButton29, toolStripButton30, toolStripButton31, toolStripButton32, toolStripSeparator2 });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { tSBtnAllowLeft, tSBtnAllowRight, toolStripSeparator3, toolStripButton21, toolStripButton22, toolStripSeparator11, toolStripButton1, toolStripButton2, toolStripButton3, toolStripButton4, toolStripButton5, toolStripButton6, toolStripSeparator4, toolStripButton7, toolStripButton8, toolStripButton9, toolStripButton10, toolStripButton11, toolStripButton12, toolStripSeparator7, toolStripButton13, toolStripButton14, toolStripButton15, toolStripButton16, toolStripSeparator8, toolStripButton17, toolStripButton18, toolStripButton19, toolStripButton20, toolStripSeparator12, toolStripButton23, toolStripButton24, toolStripButton25, toolStripButton26, toolStripButton27, toolStripButton28, toolStripButton29, toolStripButton30, toolStripButton31, toolStripButton32, toolStripSeparator2 });
             toolStrip1.Location = new Point(0, 42);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Size = new Size(1877, 46);
@@ -973,11 +972,6 @@
             toolStripButton27.Text = "toolStripButton27";
             toolStripButton27.ToolTipText = "左测杆自动调整";
             toolStripButton27.Click += btnSonarPositionMaintainL_Click;
-            // 
-            // toolStripSeparator1
-            // 
-            toolStripSeparator1.Name = "toolStripSeparator1";
-            toolStripSeparator1.Size = new Size(6, 46);
             // 
             // toolStripButton28
             // 
@@ -2760,7 +2754,6 @@
         private ToolStripButton toolStripButton24;
         private ToolStripButton toolStripButton25;
         private ToolStripButton toolStripButton26;
-        private ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.Timer timer4;
         private ComboBox serialPortComboBox;
         private BindingSource mySerialClientBindingSource;
